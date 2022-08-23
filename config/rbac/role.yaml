@@ -1,0 +1,34 @@
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: manager-role
+rules:
+- apiGroups:
+  - nsx.vmware.com
+  resources:
+  - subnets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - nsx.vmware.com
+  resources:
+  - subnets/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - nsx.vmware.com
+  resources:
+  - subnets/status
+  verbs:
+  - get
+  - patch
+  - update
