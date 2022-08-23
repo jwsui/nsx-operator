@@ -1,0 +1,24 @@
+# permissions for end users to edit subnetsets.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: subnetset-editor-role
+rules:
+- apiGroups:
+  - nsx.vmware.com
+  resources:
+  - subnetsets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - nsx.vmware.com
+  resources:
+  - subnetsets/status
+  verbs:
+  - get
