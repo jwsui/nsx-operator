@@ -4,6 +4,7 @@
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -15,14 +16,30 @@ type SubnetSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of Subnet. Edit subnet_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	IPV4SubnetSize string `json:"ipv4SubnetSize,omitempty"`
+	AccessMode     string `json:"accessMode,omitempty"`
+	IPAddresses    string `json:"ipAddresses,omitempty"`
 }
 
 // SubnetStatus defines the observed state of Subnet
 type SubnetStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+
+	LsID       string            `json:"lsID,omitempty"`
+	SubnetCIDR string            `json:"subnetCIDR,omitempty"`
+	conditions []SubnetCondition `json:"conditions"`
+}
+
+type SubnetStatusCondition string
+
+const (
+	SubnetReady SubnetStatusCondition = "Ready"
+)
+
+type SubnetCondition struct {
+	Type   SubnetStatusCondition  `json:"type"`
+	Status corev1.ConditionStatus `json:"status"`
 }
 
 //+kubebuilder:object:root=true
