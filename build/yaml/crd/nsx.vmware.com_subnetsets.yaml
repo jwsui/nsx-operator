@@ -55,10 +55,20 @@ spec:
             properties:
               conditions:
                 items:
+                  description: SubnetSetCondition defines condition of SubnetSet.
                   properties:
+                    message:
+                      description: Message shows a human readable message about condition.
+                      type: string
+                    reason:
+                      description: Reason shows a brief reason of condition.
+                      type: string
                     status:
+                      description: Status defines status of condition type, True or
+                        False.
                       type: string
                     type:
+                      description: Type defines condition type.
                       type: string
                   required:
                   - status
@@ -67,6 +77,7 @@ spec:
                 type: array
               subnets:
                 items:
+                  description: SubnetItem defines subnet items of SubnetSet.
                   properties:
                     lsID:
                       type: string
