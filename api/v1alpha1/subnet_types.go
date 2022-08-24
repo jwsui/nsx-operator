@@ -15,10 +15,12 @@ import (
 type SubnetSpec struct {
 	// Size of subnet based upon estimated workload count.
 	// Defaults to 64.
-	IPV4SubnetSize string `json:"ipv4SubnetSize,omitempty"`
+	// +kubebuilder:default:=64
+	IPV4SubnetSize string `json:"ipv4SubnetSize"`
 	// Access mode of subnet, accessible only from within VPC or from outside VPC.
 	// Defaults to private.
-	AccessMode string `json:"accessMode,omitempty"`
+	// +kubebuilder:default:=private
+	AccessMode string `json:"accessMode"`
 	// Subnet CIDR.
 	IPAddresses string `json:"ipAddresses,omitempty"`
 }
@@ -26,8 +28,8 @@ type SubnetSpec struct {
 // SubnetStatus defines the observed state of Subnet
 type SubnetStatus struct {
 	// Logical switch ID.
-	LsID       string            `json:"lsID,omitempty"`
-	SubnetCIDR string            `json:"subnetCIDR,omitempty"`
+	LsID       string            `json:"lsID"`
+	SubnetCIDR string            `json:"subnetCIDR"`
 	conditions []SubnetCondition `json:"conditions"`
 }
 
