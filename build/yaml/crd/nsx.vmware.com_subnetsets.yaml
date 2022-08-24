@@ -37,13 +37,18 @@ spec:
             description: SubnetSetSpec defines the desired state of SubnetSet
             properties:
               accessMode:
+                default: private
                 description: Access mode of subnet, accessible only from within VPC
                   or from outside VPC. Defaults to private.
                 type: string
               ipv4SubnetSize:
+                default: 64
                 description: Size of subnet based upon estimated workload count. Defaults
                   to 64.
                 type: string
+            required:
+            - accessMode
+            - ipv4SubnetSize
             type: object
           status:
             description: SubnetSetStatus defines the observed state of SubnetSet
