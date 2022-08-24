@@ -13,19 +13,19 @@ import (
 
 // SubnetSpec defines the desired state of Subnet
 type SubnetSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
+	// Size of subnet based upon estimated workload count.
+	// Defaults to 64.
 	IPV4SubnetSize string `json:"ipv4SubnetSize,omitempty"`
-	AccessMode     string `json:"accessMode,omitempty"`
-	IPAddresses    string `json:"ipAddresses,omitempty"`
+	// Access mode of subnet, accessible only from within VPC or from outside VPC.
+	// Defaults to private.
+	AccessMode string `json:"accessMode,omitempty"`
+	// Subnet CIDR.
+	IPAddresses string `json:"ipAddresses,omitempty"`
 }
 
 // SubnetStatus defines the observed state of Subnet
 type SubnetStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
+	// Logical switch ID.
 	LsID       string            `json:"lsID,omitempty"`
 	SubnetCIDR string            `json:"subnetCIDR,omitempty"`
 	conditions []SubnetCondition `json:"conditions"`

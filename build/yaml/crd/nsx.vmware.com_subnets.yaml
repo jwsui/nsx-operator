@@ -37,10 +37,15 @@ spec:
             description: SubnetSpec defines the desired state of Subnet
             properties:
               accessMode:
+                description: Access mode of subnet, accessible only from within VPC
+                  or from outside VPC. Defaults to private.
                 type: string
               ipAddresses:
+                description: Subnet CIDR.
                 type: string
               ipv4SubnetSize:
+                description: Size of subnet based upon estimated workload count. Defaults
+                  to 64.
                 type: string
             type: object
           status:
@@ -59,6 +64,7 @@ spec:
                   type: object
                 type: array
               lsID:
+                description: Logical switch ID.
                 type: string
               subnetCIDR:
                 type: string
