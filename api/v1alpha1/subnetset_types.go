@@ -4,6 +4,7 @@
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -12,17 +13,34 @@ import (
 
 // SubnetSetSpec defines the desired state of SubnetSet
 type SubnetSetSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of SubnetSet. Edit subnetset_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// Size of subnet based upon estimated workload count.
+	// Defaults to 64.
+	IPV4SubnetSize string `json:"ipv4SubnetSize,omitempty"`
+	// Access mode of subnet, accessible only from within VPC or from outside VPC.
+	// Defaults to private.
+	AccessMode string `json:"accessMode,omitempty"`
 }
 
 // SubnetSetStatus defines the observed state of SubnetSet
 type SubnetSetStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	Conditions []SubnetSetCondition `json:"conditions"`
+	Subnets    []SubnetItem         `json:"subnets"`
+}
+
+type SubnetSetStatusCondition string
+
+const (
+	SubnetSetReady SubnetSetStatusCondition = "Ready"
+)
+
+type SubnetSetCondition struct {
+	Type   SubnetSetStatusCondition `json:"type"`
+	Status corev1.ConditionStatus   `json:"status"`
+}
+
+type SubnetItem struct {
+	LsID       string `json:"lsID"`
+	SubnetCIDR string `json:"subnetCIDR"`
 }
 
 //+kubebuilder:object:root=true

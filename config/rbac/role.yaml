@@ -32,3 +32,29 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - nsx.vmware.com
+  resources:
+  - subnetsets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - nsx.vmware.com
+  resources:
+  - subnetsets/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - nsx.vmware.com
+  resources:
+  - subnetsets/status
+  verbs:
+  - get
+  - patch
+  - update
