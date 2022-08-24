@@ -8,8 +8,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+type SubnetStatusCondition string
+
+const (
+	SubnetReady    SubnetStatusCondition = "Ready"
+	SubnetNotReady SubnetStatusCondition = "NotReady"
+)
 
 // SubnetSpec defines the desired state of Subnet
 type SubnetSpec struct {
@@ -25,23 +29,24 @@ type SubnetSpec struct {
 	IPAddresses string `json:"ipAddresses,omitempty"`
 }
 
+// SubnetCondition defines condition of Subnet.
+type SubnetCondition struct {
+	// Type defines condition type.
+	Type SubnetStatusCondition `json:"type"`
+	// Status defines status of condition type, True or False.
+	Status corev1.ConditionStatus `json:"status"`
+	// Reason shows a brief reason of condition.
+	Reason string `json:"reason,omitempty"`
+	// Message shows a human readable message about condition.
+	Message string `json:"message,omitempty"`
+}
+
 // SubnetStatus defines the observed state of Subnet
 type SubnetStatus struct {
 	// Logical switch ID.
 	LsID       string            `json:"lsID"`
 	SubnetCIDR string            `json:"subnetCIDR"`
 	conditions []SubnetCondition `json:"conditions"`
-}
-
-type SubnetStatusCondition string
-
-const (
-	SubnetReady SubnetStatusCondition = "Ready"
-)
-
-type SubnetCondition struct {
-	Type   SubnetStatusCondition  `json:"type"`
-	Status corev1.ConditionStatus `json:"status"`
 }
 
 //+kubebuilder:object:root=true

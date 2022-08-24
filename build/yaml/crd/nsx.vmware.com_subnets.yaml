@@ -58,10 +58,20 @@ spec:
             properties:
               conditions:
                 items:
+                  description: SubnetCondition defines condition of Subnet.
                   properties:
+                    message:
+                      description: Message shows a human readable message about condition.
+                      type: string
+                    reason:
+                      description: Reason shows a brief reason of condition.
+                      type: string
                     status:
+                      description: Status defines status of condition type, True or
+                        False.
                       type: string
                     type:
+                      description: Type defines condition type.
                       type: string
                   required:
                   - status
