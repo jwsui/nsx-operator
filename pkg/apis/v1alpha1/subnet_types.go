@@ -13,6 +13,7 @@ type AccessMode string
 type SubnetSpec struct {
 	// Size of Subnet based upon estimated workload count.
 	// Defaults to 64.
+	// TODO Add validate webhook as IPV4SubnetSize cannot be updated.
 	// +kubebuilder:default:=64
 	IPv4SubnetSize int `json:"ipv4SubnetSize,omitempty"`
 	// Access mode of Subnet, accessible only from within VPC or from outside VPC.
