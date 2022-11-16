@@ -18,6 +18,8 @@ import (
 	"github.com/vmware-tanzu/nsx-operator/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/nsx-operator/pkg/config"
 	securitypolicycontroller "github.com/vmware-tanzu/nsx-operator/pkg/controllers/securitypolicy"
+	"github.com/vmware-tanzu/nsx-operator/pkg/controllers/subnet"
+	"github.com/vmware-tanzu/nsx-operator/pkg/controllers/subnetset"
 	"github.com/vmware-tanzu/nsx-operator/pkg/logger"
 	"github.com/vmware-tanzu/nsx-operator/pkg/metrics"
 	"github.com/vmware-tanzu/nsx-operator/pkg/nsx"
@@ -100,6 +102,9 @@ func main() {
 
 	// Start the security policy controller.
 	StartSecurityPolicyController(mgr, commonService)
+	// Start subnet/subnetset controller.
+	subnet.StartSubnetController(mgr, commonService)
+	subnetset.StartSubnetSetController(mgr, commonService)
 
 	if metrics.AreMetricsExposed(cf) {
 		go updateHealthMetricsPeriodically(nsxClient)

@@ -31,6 +31,8 @@ const (
 	TagScopeNCPVNETInterface     string = "ncp/vnet_interface"
 	TagScopeVPCCRName            string = "nsx-op/vpc_cr_name"
 	TagScopeVPCCRUID             string = "nsx-op/vpc_cr_uid"
+	TagScopeSubnetCRName         string = "nsx-op/subnet_cr_name"
+	TagScopeSubnetCRUID          string = "nsx-op/subnet_cr_uid"
 
 	GCInterval    = 60 * time.Second
 	FinalizerName = "securitypolicy.nsx.vmware.com/finalizer"
@@ -42,6 +44,7 @@ var (
 	ResourceTypeGroup          = "Group"
 	ResourceTypeRule           = "Rule"
 	ResourceTypeVPC            = "VPC"
+	ResourceTypeSubnet         = "VpcSubnet"
 )
 
 type Service struct {
@@ -59,4 +62,5 @@ func NewConverter() *bindings.TypeConverter {
 var (
 	String = pointy.String // address of string
 	Int64  = pointy.Int64  // address of int64
+	Bool   = pointy.Bool   // address of bool
 )

@@ -10,6 +10,7 @@ import (
 type AccessMode string
 
 // SubnetSpec defines the desired state of Subnet.
+// TODO Add validate webhook or CEL(k8s 1.25+) for immutable fields(IPv4SubnetSize/AccessMode/IPAddresses/DHCPConfig).
 type SubnetSpec struct {
 	// Size of Subnet based upon estimated workload count.
 	// Defaults to 64.
