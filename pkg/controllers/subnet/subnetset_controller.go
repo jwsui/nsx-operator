@@ -9,7 +9,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
@@ -26,14 +25,12 @@ func (r *SubnetSetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 func (r *SubnetSetReconciler) setupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.SubnetSet{}).
-		WithOptions(
-			controller.Options{
-				MaxConcurrentReconciles: runtime.NumCPU(),
-			}).
-		Watches(&source.Kind{Type: &v1.Namespace{}},
-			&handler.EnqueueRequestForObject{},
-		).Complete(r)
-	// TODO watch VPC CRD to creating default 'DefaultVMSubnetSet' and 'DefaultPodSubnetSet'.
+		WithOptions(controller.Options{
+			MaxConcurrentReconciles: runtime.NumCPU(),
+		}).
+		Watches(&source.Kind{Type: &v1.Namespace{}}, &NamespaceHandler{Client: mgr.GetClient()}).
+		Watches(&source.Kind{Type: &v1alpha1.VPC{}}, &VPCHandler{Client: mgr.GetClient()}).
+		Complete(r)
 }
 
 // Start setup manager

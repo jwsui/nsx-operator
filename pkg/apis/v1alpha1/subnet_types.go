@@ -13,6 +13,7 @@ type AccessMode string
 type SubnetSpec struct {
 	// Size of Subnet based upon estimated workload count.
 	// Defaults to 64.
+	// TODO Add validate webhook as IPV4SubnetSize cannot be updated.
 	// +kubebuilder:default:=64
 	// +kubebuilder:validation:Maximum:=65536
 	// +kubebuilder:validation:Minimum:=16
