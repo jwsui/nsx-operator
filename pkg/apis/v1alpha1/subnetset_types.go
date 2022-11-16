@@ -8,6 +8,7 @@ import (
 )
 
 // SubnetSetSpec defines the desired state of SubnetSet.
+// TODO Add validate webhook or CEL(k8s 1.25+) for immutable fields(IPv4SubnetSize/AccessMode/DHCPConfig).
 type SubnetSetSpec struct {
 	// Size of Subnet based upon estimated workload count.
 	// Defaults to 64.
@@ -17,8 +18,8 @@ type SubnetSetSpec struct {
 	IPv4SubnetSize int `json:"ipv4SubnetSize,omitempty"`
 	// Access mode of Subnet, accessible only from within VPC or from outside VPC.
 	// Defaults to private.
-	// +kubebuilder:default:=private
-	// +kubebuilder:validation:Enum=private;public
+	// +kubebuilder:default:=Private
+	// +kubebuilder:validation:Enum=Private;Public
 	AccessMode AccessMode `json:"accessMode,omitempty"`
 	// Subnet advanced configuration.
 	AdvancedConfig AdvancedConfig `json:"advancedConfig,omitempty"`

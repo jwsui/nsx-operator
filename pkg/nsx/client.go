@@ -19,7 +19,10 @@ import (
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/infra/domains/security_policies"
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/infra/sites/enforcement_points"
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/orgs/projects/infra/realized_state"
+	vpc_search "github.com/vmware/vsphere-automation-sdk-go/services/nsxt/orgs/projects/search"
+	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/orgs/projects/vpcs"
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/orgs/projects/vpcs/subnets"
+	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/orgs/projects/vpcs/subnets/ip_pools"
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/orgs/projects/vpcs/subnets/ports"
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/search"
 
@@ -50,8 +53,14 @@ type Client struct {
 	PrincipalIdentitiesClient trust_management.PrincipalIdentitiesClient
 	WithCertificateClient     principal_identities.WithCertificateClient
 
-	PortClient      subnets.PortsClient
-	PortStateClient ports.StateClient
+	PortClient          subnets.PortsClient
+	PortStateClient     ports.StateClient
+	VPCQueryClient      vpc_search.QueryClient
+	IPPoolClient        subnets.IpPoolsClient
+	IPAllocationClient  ip_pools.IpAllocationsClient
+	OrgRootClient       nsx_policy.OrgRootClient
+	SubnetsClient       vpcs.SubnetsClient
+	RealizedStateClient realized_state.RealizedEntitiesClient
 
 	NSXChecker    NSXHealthChecker
 	NSXVerChecker NSXVersionChecker
@@ -109,6 +118,12 @@ func GetClient(cf *config.NSXOperatorConfig) *Client {
 	portStateClient := ports.NewStateClient(restConnector(cluster))
 	subnetStatusClient := subnets.NewStatusClient(restConnector(cluster))
 
+	vpcQueryClient := vpc_search.NewQueryClient(restConnector(cluster))
+	ipPoolClient := subnets.NewIpPoolsClient(restConnector(cluster))
+	ipAllocationClient := ip_pools.NewIpAllocationsClient(restConnector(cluster))
+	orgRootClient := nsx_policy.NewOrgRootClient(restConnector(cluster))
+	subnetsClient := vpcs.NewSubnetsClient(restConnector(cluster))
+	realizedStateClient := realized_state.NewRealizedEntitiesClient(restConnector(cluster))
 	nsxChecker := &NSXHealthChecker{
 		cluster: cluster,
 	}
@@ -138,8 +153,14 @@ func GetClient(cf *config.NSXOperatorConfig) *Client {
 		PortStateClient:    portStateClient,
 		SubnetStatusClient: subnetStatusClient,
 
-		NSXChecker:    *nsxChecker,
-		NSXVerChecker: *nsxVersionChecker,
+		NSXChecker:          *nsxChecker,
+		NSXVerChecker:       *nsxVersionChecker,
+		VPCQueryClient:      vpcQueryClient,
+		IPPoolClient:        ipPoolClient,
+		IPAllocationClient:  ipAllocationClient,
+		OrgRootClient:       orgRootClient,
+		SubnetsClient:       subnetsClient,
+		RealizedStateClient: realizedStateClient,
 	}
 	// NSX version check will be restarted during SecurityPolicy reconcile
 	// So, it's unnecessary to exit even if failed in the first time

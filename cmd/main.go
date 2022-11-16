@@ -19,7 +19,9 @@ import (
 	commonctl "github.com/vmware-tanzu/nsx-operator/pkg/controllers/common"
 	nsxserviceaccountcontroller "github.com/vmware-tanzu/nsx-operator/pkg/controllers/nsxserviceaccount"
 	securitypolicycontroller "github.com/vmware-tanzu/nsx-operator/pkg/controllers/securitypolicy"
+	"github.com/vmware-tanzu/nsx-operator/pkg/controllers/subnet"
 	"github.com/vmware-tanzu/nsx-operator/pkg/controllers/subnetport"
+	"github.com/vmware-tanzu/nsx-operator/pkg/controllers/subnetset"
 	"github.com/vmware-tanzu/nsx-operator/pkg/logger"
 	"github.com/vmware-tanzu/nsx-operator/pkg/metrics"
 	"github.com/vmware-tanzu/nsx-operator/pkg/nsx"
@@ -134,6 +136,13 @@ func main() {
 	// Start the NSXServiceAccount controller.
 	if cf.EnableAntreaNSXInterworking {
 		StartNSXServiceAccountController(mgr, commonService)
+	}
+	// Start subnet/subnetset controller.
+	if err := subnet.StartSubnetController(mgr, commonService); err != nil {
+		os.Exit(1)
+	}
+	if err := subnetset.StartSubnetSetController(mgr, commonService); err != nil {
+		os.Exit(1)
 	}
 
 	subnetport.StartSubnetPortController(mgr, commonService)

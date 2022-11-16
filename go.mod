@@ -6,7 +6,7 @@ replace (
 	github.com/vmware/go-vmware-nsxt => github.com/mengdie-song/go-vmware-nsxt v0.0.0-20220921033217-dbd234470e30 // inventory-keeper includes all commits from github.com/gran-vmv/go-vmware-nsxt v0.0.0-20211206034609-cd7ffaf2c996
 	github.com/vmware/vsphere-automation-sdk-go/lib => github.com/TaoZou1/vsphere-automation-sdk-go/lib v0.5.4
 	github.com/vmware/vsphere-automation-sdk-go/runtime => github.com/TaoZou1/vsphere-automation-sdk-go/runtime v0.5.4
-	github.com/vmware/vsphere-automation-sdk-go/services/nsxt => github.com/TaoZou1/vsphere-automation-sdk-go/services/nsxt v0.9.5
+	github.com/vmware/vsphere-automation-sdk-go/services/nsxt => github.com/TaoZou1/vsphere-automation-sdk-go/services/nsxt v0.9.3
 	github.com/vmware/vsphere-automation-sdk-go/services/nsxt-mp => github.com/TaoZou1/vsphere-automation-sdk-go/services/nsxt-mp v0.3.1-0.20221020082725-84e89979deb6
 )
 
@@ -18,6 +18,7 @@ require (
 	github.com/go-logr/logr v1.2.3
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/golang/mock v1.6.0
+	github.com/google/uuid v1.2.0
 	github.com/kevinburke/ssh_config v1.2.0
 	github.com/openlyinc/pointy v1.1.2
 	github.com/prometheus/client_golang v1.14.0
@@ -26,7 +27,7 @@ require (
 	github.com/vmware/govmomi v0.27.4
 	github.com/vmware/vsphere-automation-sdk-go/lib v0.5.2
 	github.com/vmware/vsphere-automation-sdk-go/runtime v0.5.2
-	github.com/vmware/vsphere-automation-sdk-go/services/nsxt v0.6.0
+	github.com/vmware/vsphere-automation-sdk-go/services/nsxt v0.11.0
 	github.com/vmware/vsphere-automation-sdk-go/services/nsxt-mp v0.3.0
 	go.uber.org/zap v1.24.0
 	golang.org/x/crypto v0.5.0
@@ -40,6 +41,7 @@ require (
 )
 
 require (
+	github.com/apparentlymart/go-cidr v1.1.0 // indirect
 	github.com/beevik/etree v1.1.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
@@ -59,7 +61,6 @@ require (
 	github.com/google/gnostic v0.5.7-v3refs // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
-	github.com/google/uuid v1.2.0 // indirect
 	github.com/imdario/mergo v0.3.6 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect

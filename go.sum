@@ -37,6 +37,8 @@ github.com/TaoZou1/vsphere-automation-sdk-go/lib v0.5.4 h1:DlmdgfnJZBf3xKVlIzV8h
 github.com/TaoZou1/vsphere-automation-sdk-go/lib v0.5.4/go.mod h1:QJG7MJEjc8SJuo6p++sLJha7Sqt0tzyxjK1peikCB/E=
 github.com/TaoZou1/vsphere-automation-sdk-go/runtime v0.5.4 h1:HfPCC2OxVMZjMgfRFD6txpgynbua+roPkMT3f+SoHbA=
 github.com/TaoZou1/vsphere-automation-sdk-go/runtime v0.5.4/go.mod h1:GqC85noyNzapJN4vIAO9jJ1EKVo3+jCW4/2VTaMvuSg=
+github.com/TaoZou1/vsphere-automation-sdk-go/services/nsxt v0.9.3 h1:u7Qr1LRqz98ouREoRE5rZA5O4l8TtMG3NYkrZFYigBc=
+github.com/TaoZou1/vsphere-automation-sdk-go/services/nsxt v0.9.3/go.mod h1:9iS9n04yKlWA4AoVU6GpvMcFB7inP1D7kMyZb5RQVdM=
 github.com/TaoZou1/vsphere-automation-sdk-go/services/nsxt v0.9.5 h1:TfXvc3C/LLrIqkxcJVdOsrDp9NDmq8dRqxxUoUBXZnA=
 github.com/TaoZou1/vsphere-automation-sdk-go/services/nsxt v0.9.5/go.mod h1:r6vXdrxnApdHWL8zxnKrWXinGoP8HEXvMVLxKcarV8c=
 github.com/TaoZou1/vsphere-automation-sdk-go/services/nsxt-mp v0.3.1-0.20221020082725-84e89979deb6 h1:sFObhyzxRrFCQvvZgVbWwAGyxUvhlom14Axv0Cjix90=
@@ -51,6 +53,8 @@ github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751/go.mod h1:LOuy
 github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
 github.com/alecthomas/units v0.0.0-20190717042225-c3de453c63f4/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
 github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d/go.mod h1:rBZYJk541a8SKzHPHnH3zbiI+7dagKZ0cgpgrD7Fyho=
+github.com/apparentlymart/go-cidr v1.1.0 h1:2mAhrMoF+nhXqxTzSZMUzDHkLjmIHC+Zzn4tdgBZjnU=
+github.com/apparentlymart/go-cidr v1.1.0/go.mod h1:EBcsNrHc3zQeuaeCeCtQruQm+n9/YjEn/vI25Lg7Gwc=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 h1:0CwZNZbxp69SHPdPJAN/hZIm0C4OItdklCFmMRWYpio=
 github.com/beevik/etree v1.1.0 h1:T0xke/WvNtMoCqgzPhkX2r4rjY3GDZFi+FjpRZY2Jbs=
 github.com/beevik/etree v1.1.0/go.mod h1:r8Aw8JqVegEf0w2fDnATrX9VpkMcyFeM0FhwO62wh+A=
