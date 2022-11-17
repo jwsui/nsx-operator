@@ -30,6 +30,7 @@ const (
 	TagScopeNCPVIFProject        string = "ncp/vif_project"
 	TagScopeNCPPod               string = "ncp/pod"
 	TagScopeNCPVNETInterface     string = "ncp/vnet_interface"
+	TagScopeSubnetCRUID          string = "nsx-op/subnet_cr_uid"
 
 	GCInterval    = 60 * time.Second
 	FinalizerName = "securitypolicy.nsx.vmware.com/finalizer"
@@ -40,6 +41,7 @@ var (
 	ResourceTypeSecurityPolicy string = "SecurityPolicy"
 	ResourceTypeGroup          string = "Group"
 	ResourceTypeRule           string = "Rule"
+	ResourceTypeSubnet         string = "Subnet"
 )
 
 type Service struct {
