@@ -2,8 +2,6 @@ package subnet
 
 import (
 	"errors"
-	"k8s.io/client-go/tools/cache"
-
 	"github.com/vmware-tanzu/nsx-operator/pkg/nsx/services/common"
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/model"
 )
@@ -45,15 +43,11 @@ type SubnetStore struct {
 	common.ResourceStore
 }
 
-func subnetAssertion(i interface{}) interface{} {
-	return i.(model.VpcSubnet)
-}
-
-func (subnetStore *SubnetStore) CRUDResource(i interface{}) error {
+func (subnetStore *SubnetStore) Operate(i interface{}) error {
 	if i == nil {
 		return nil
 	}
-	subnet := i.(*model.SecurityPolicy)
+	subnet := i.(*model.VpcSubnet)
 	if subnet.MarkedForDelete != nil && *subnet.MarkedForDelete {
 		if err := subnetStore.Delete(*subnet); err != nil {
 			return err
@@ -66,9 +60,4 @@ func (subnetStore *SubnetStore) CRUDResource(i interface{}) error {
 		log.Info("Subnet added to store", "Subnet", subnet)
 	}
 	return nil
-}
-
-func InitializeStore(service *SubnetService) {
-	service.ResourceCacheMap = make(map[string]cache.Indexer)
-	service.ResourceCacheMap[ResourceTypeSubnet] = cache.NewIndexer(keyFunc, cache.Indexers{common.TagScopeSecurityPolicyCRUID: indexFunc})
 }
