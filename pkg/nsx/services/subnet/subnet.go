@@ -1,6 +1,7 @@
 package subnet
 
 import (
+	"github.com/vmware-tanzu/nsx-operator/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/nsx-operator/pkg/logger"
 	"github.com/vmware-tanzu/nsx-operator/pkg/nsx/services/common"
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/model"
@@ -36,7 +37,6 @@ func InitializeSubnetService(service common.Service) (*SubnetService, error) {
 		},
 	}
 
-	// TODO Maybe avoid use wg as there is only one goroutine.
 	wg.Add(1)
 	go subnetService.InitializeResourceStore(&wg, fatalErrors, ResourceTypeSubnet, subnetService.subnetStore)
 	go func() {
@@ -51,4 +51,12 @@ func InitializeSubnetService(service common.Service) (*SubnetService, error) {
 		return subnetService, err
 	}
 	return subnetService, nil
+}
+
+func (service *SubnetService) CreateOrUpdateSubnet(obj *v1alpha1.Subnet) error {
+	return nil
+}
+
+func (service *SubnetService) DeleteSubnet(obj interface{}) error {
+	return nil
 }

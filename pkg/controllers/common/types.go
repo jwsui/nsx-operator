@@ -8,6 +8,7 @@ import (
 
 const (
 	MetricResTypeSecurityPolicy = "securitypolicy"
+	MetricResTypeSubnet         = "subnet"
 )
 
 var (
