@@ -28,7 +28,8 @@ var (
 	ResultNormal            = common.ResultNormal
 	ResultRequeue           = common.ResultRequeue
 	ResultRequeueAfter5mins = common.ResultRequeueAfter5mins
-	MetricResType           = common.MetricResTypeSubnet
+	MetricResTypeSubnet     = common.MetricResTypeSubnet
+	MetricResTypeSubnetSet  = common.MetricResTypeSubnetSet
 )
 
 // SubnetReconciler reconciles a SubnetSet object
@@ -41,7 +42,7 @@ type SubnetReconciler struct {
 func (r *SubnetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	obj := &v1alpha1.Subnet{}
 	log.Info("reconciling subnet CR", "subnet", req.NamespacedName)
-	metrics.CounterInc(r.Service.NSXConfig, metrics.ControllerSyncTotal, MetricResType)
+	metrics.CounterInc(r.Service.NSXConfig, metrics.ControllerSyncTotal, MetricResTypeSubnet)
 
 	if err := r.Client.Get(ctx, req.NamespacedName, obj); err != nil {
 		log.Error(err, "unable to fetch Subnet CR", "req", req.NamespacedName)
@@ -50,7 +51,7 @@ func (r *SubnetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 
 	//TODO version check.
 	if obj.ObjectMeta.DeletionTimestamp.IsZero() {
-		metrics.CounterInc(r.Service.NSXConfig, metrics.ControllerUpdateTotal, MetricResType)
+		metrics.CounterInc(r.Service.NSXConfig, metrics.ControllerUpdateTotal, MetricResTypeSubnet)
 		if !controllerutil.ContainsFinalizer(obj, servicecommon.FinalizerName) {
 			controllerutil.AddFinalizer(obj, servicecommon.FinalizerName)
 			if err := r.Client.Update(ctx, obj); err != nil {
@@ -73,7 +74,7 @@ func (r *SubnetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		updateSuccess(r, &ctx, obj)
 	} else {
 		if controllerutil.ContainsFinalizer(obj, servicecommon.FinalizerName) {
-			metrics.CounterInc(r.Service.NSXConfig, metrics.ControllerDeleteTotal, MetricResType)
+			metrics.CounterInc(r.Service.NSXConfig, metrics.ControllerDeleteTotal, MetricResTypeSubnet)
 			if err := r.Service.DeleteSubnet(obj.UID); err != nil {
 				log.Error(err, "deletion failed, would retry exponentially", "subnet", req.NamespacedName)
 				deleteFail(r, &ctx, obj, &err)
@@ -164,21 +165,21 @@ func getExistingConditionOfType(conditionType v1alpha1.ConditionType, existingCo
 
 func updateFail(r *SubnetReconciler, c *context.Context, o *v1alpha1.Subnet, e *error) {
 	r.setSubnetReadyStatusFalse(c, o, e)
-	metrics.CounterInc(r.Service.NSXConfig, metrics.ControllerUpdateFailTotal, MetricResType)
+	metrics.CounterInc(r.Service.NSXConfig, metrics.ControllerUpdateFailTotal, MetricResTypeSubnet)
 }
 
 func deleteFail(r *SubnetReconciler, c *context.Context, o *v1alpha1.Subnet, e *error) {
 	r.setSubnetReadyStatusFalse(c, o, e)
-	metrics.CounterInc(r.Service.NSXConfig, metrics.ControllerDeleteFailTotal, MetricResType)
+	metrics.CounterInc(r.Service.NSXConfig, metrics.ControllerDeleteFailTotal, MetricResTypeSubnet)
 }
 
 func updateSuccess(r *SubnetReconciler, c *context.Context, o *v1alpha1.Subnet) {
 	r.setSubnetReadyStatusTrue(c, o)
-	metrics.CounterInc(r.Service.NSXConfig, metrics.ControllerUpdateSuccessTotal, MetricResType)
+	metrics.CounterInc(r.Service.NSXConfig, metrics.ControllerUpdateSuccessTotal, MetricResTypeSubnet)
 }
 
 func deleteSuccess(r *SubnetReconciler, _ *context.Context, _ *v1alpha1.Subnet) {
-	metrics.CounterInc(r.Service.NSXConfig, metrics.ControllerDeleteSuccessTotal, MetricResType)
+	metrics.CounterInc(r.Service.NSXConfig, metrics.ControllerDeleteSuccessTotal, MetricResTypeSubnet)
 }
 
 func (r *SubnetReconciler) setupWithManager(mgr ctrl.Manager) error {
