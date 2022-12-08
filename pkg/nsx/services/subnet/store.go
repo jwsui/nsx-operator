@@ -61,3 +61,12 @@ func (subnetStore *SubnetStore) Operate(i interface{}) error {
 	}
 	return nil
 }
+
+func (subnetStore *SubnetStore) GetByIndex(key string, value string) []model.VpcSubnet {
+	subnets := make([]model.VpcSubnet, 0)
+	objs := subnetStore.ResourceStore.GetByIndex(key, value)
+	for _, subnet := range objs {
+		subnets = append(subnets, subnet.(model.VpcSubnet))
+	}
+	return subnets
+}

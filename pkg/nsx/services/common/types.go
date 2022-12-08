@@ -43,7 +43,7 @@ var (
 	ResourceTypeGroup          = "Group"
 	ResourceTypeRule           = "Rule"
 	ResourceTypeVPC            = "VPC"
-	ResourceTypeSubnet         = "Subnet"
+	ResourceTypeSubnet         = "VpcSubnet"
 )
 
 type Service struct {
