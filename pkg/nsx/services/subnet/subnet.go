@@ -55,6 +55,14 @@ func InitializeSubnetService(service common.Service) (*SubnetService, error) {
 }
 
 func (service *SubnetService) CreateOrUpdateSubnet(obj *v1alpha1.Subnet) error {
+	//nsxSubnet, err := service.buildSubnet(obj)
+	//if err != nil {
+	//	log.Error(err, "failed to build Subnet")
+	//	return err
+	//}
+	//TODO compare subnet
+	//existingSubnet := service.subnetStore.GetByKey(*nsxSubnet.Id)
+
 	return nil
 }
 
