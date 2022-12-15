@@ -1,13 +1,15 @@
 package subnet
 
 import (
-	"github.com/vmware-tanzu/nsx-operator/pkg/apis/v1alpha1"
-	"github.com/vmware-tanzu/nsx-operator/pkg/logger"
-	"github.com/vmware-tanzu/nsx-operator/pkg/nsx/services/common"
+	"sync"
+
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/model"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
-	"sync"
+
+	"github.com/vmware-tanzu/nsx-operator/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/nsx-operator/pkg/logger"
+	"github.com/vmware-tanzu/nsx-operator/pkg/nsx/services/common"
 )
 
 var (
@@ -55,14 +57,31 @@ func InitializeSubnetService(service common.Service) (*SubnetService, error) {
 }
 
 func (service *SubnetService) CreateOrUpdateSubnet(obj *v1alpha1.Subnet) error {
-	//nsxSubnet, err := service.buildSubnet(obj)
-	//if err != nil {
-	//	log.Error(err, "failed to build Subnet")
-	//	return err
-	//}
-	//TODO compare subnet
-	//existingSubnet := service.subnetStore.GetByKey(*nsxSubnet.Id)
-
+	nsxSubnet, err := service.buildSubnet(obj)
+	if err != nil {
+		log.Error(err, "failed to build Subnet")
+		return err
+	}
+	existingSubnet := service.SubnetStore.GetByKey(*nsxSubnet.Id)
+	changed := common.CompareResource(SubnetToComparable(existingSubnet), SubnetToComparable(nsxSubnet))
+	if !changed {
+		log.Info("subnet not changed, skip updating", "subnet.Id", *nsxSubnet.Id)
+		return nil
+	}
+	// WrapHighLevelSubnet will modify the input subnet, make a copy for the following store update.
+	subnetCopy := *nsxSubnet
+	infraSubnet, err := service.WrapHierarchySubnet(nsxSubnet)
+	if err != nil {
+		log.Error(err, "WrapHierarchySubnet failed")
+		return err
+	}
+	if err = service.NSXClient.InfraClient.Patch(*infraSubnet, &EnforceRevisionCheckParam); err != nil {
+		return err
+	}
+	if err = service.SubnetStore.Operate(&subnetCopy); err != nil {
+		return err
+	}
+	log.Info("successfully updated nsxSubnet", "nsxSubnet", nsxSubnet)
 	return nil
 }
 
@@ -85,6 +104,8 @@ func (service *SubnetService) DeleteSubnet(obj interface{}) error {
 		nsxSubnet = &subnets[0]
 	}
 	nsxSubnet.MarkedForDelete = &MarkedForDelete
+	// WrapHighLevelSubnet will modify the input subnet, make a copy for the following store update.
+	subnetCopy := *nsxSubnet
 	infraSubnet, err := service.WrapHierarchySubnet(nsxSubnet)
 	if err != nil {
 		return err
@@ -92,7 +113,7 @@ func (service *SubnetService) DeleteSubnet(obj interface{}) error {
 	if err = service.NSXClient.InfraClient.Patch(*infraSubnet, &EnforceRevisionCheckParam); err != nil {
 		return err
 	}
-	if err = service.SubnetStore.Operate(nsxSubnet); err != nil {
+	if err = service.SubnetStore.Operate(&subnetCopy); err != nil {
 		return err
 	}
 	log.Info("successfully deleted  nsxSubnet", "nsxSubnet", nsxSubnet)
