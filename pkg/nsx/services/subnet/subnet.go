@@ -20,7 +20,7 @@ var (
 
 type SubnetService struct {
 	common.Service
-	subnetStore *SubnetStore
+	SubnetStore *SubnetStore
 }
 
 // InitializeSubnetService initialize Subnet service.
@@ -30,7 +30,7 @@ func InitializeSubnetService(service common.Service) (*SubnetService, error) {
 	fatalErrors := make(chan error)
 	subnetService := &SubnetService{
 		Service: service,
-		subnetStore: &SubnetStore{
+		SubnetStore: &SubnetStore{
 			ResourceStore: common.ResourceStore{
 				Indexer:     cache.NewIndexer(keyFunc, cache.Indexers{common.TagScopeSubnetCRUID: indexFunc}),
 				BindingType: model.VpcSubnetBindingType(),
@@ -39,7 +39,7 @@ func InitializeSubnetService(service common.Service) (*SubnetService, error) {
 	}
 
 	wg.Add(1)
-	go subnetService.InitializeResourceStore(&wg, fatalErrors, ResourceTypeSubnet, subnetService.subnetStore)
+	go subnetService.InitializeResourceStore(&wg, fatalErrors, ResourceTypeSubnet, subnetService.SubnetStore)
 	go func() {
 		wg.Wait()
 		close(wgDone)
@@ -77,7 +77,7 @@ func (service *SubnetService) DeleteSubnet(obj interface{}) error {
 			return err
 		}
 	case types.UID:
-		subnets := service.subnetStore.GetByIndex(common.TagScopeSubnetCRUID, string(subnet))
+		subnets := service.SubnetStore.GetByIndex(common.TagScopeSubnetCRUID, string(subnet))
 		if len(subnets) == 0 {
 			log.Info("subnet is not found in store, skip deleting it", "uid", string(subnet))
 			return nil
@@ -92,7 +92,7 @@ func (service *SubnetService) DeleteSubnet(obj interface{}) error {
 	if err = service.NSXClient.InfraClient.Patch(*infraSubnet, &EnforceRevisionCheckParam); err != nil {
 		return err
 	}
-	if err = service.subnetStore.Operate(nsxSubnet); err != nil {
+	if err = service.SubnetStore.Operate(nsxSubnet); err != nil {
 		return err
 	}
 	log.Info("successfully deleted  nsxSubnet", "nsxSubnet", nsxSubnet)

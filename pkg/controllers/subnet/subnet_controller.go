@@ -71,6 +71,11 @@ func (r *SubnetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 			updateFail(r, &ctx, obj, &err)
 			return ResultRequeue, err
 		}
+		if err := r.updateSubnetStatus(obj); err != nil {
+			log.Error(err, "update subnet status failed, would retry exponentially", "subnet", req.NamespacedName)
+			updateFail(r, &ctx, obj, &err)
+			return ResultRequeue, err
+		}
 		updateSuccess(r, &ctx, obj)
 	} else {
 		if controllerutil.ContainsFinalizer(obj, servicecommon.FinalizerName) {
@@ -93,6 +98,19 @@ func (r *SubnetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		}
 	}
 	return ctrl.Result{}, nil
+}
+
+func (r *SubnetReconciler) updateSubnetStatus(obj *v1alpha1.Subnet) error {
+	nsxSubnets := r.Service.SubnetStore.GetByIndex(servicecommon.TagScopeSubnetCRUID, string(obj.UID))
+	if len(nsxSubnets) == 0 {
+		return errors.New("failed to get subnet from store")
+	}
+	obj.Status.IPAddresses = make([]string, len(nsxSubnets[0].IpAddresses))
+	for i := 0; i < len(nsxSubnets[0].IpAddresses); i++ {
+		obj.Status.IPAddresses[i] = nsxSubnets[0].IpAddresses[i]
+	}
+	obj.Status.NSXResourcePath = *nsxSubnets[0].Path
+	return nil
 }
 
 func (r *SubnetReconciler) setSubnetReadyStatusTrue(ctx *context.Context, subnet *v1alpha1.Subnet) {
