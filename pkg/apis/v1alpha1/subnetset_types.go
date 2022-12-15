@@ -14,15 +14,18 @@ type SubnetSetSpec struct {
 	// +kubebuilder:default:=64
 	// +kubebuilder:validation:Maximum:=65536
 	// +kubebuilder:validation:Minimum:=16
+	// TODO Add validate webhook or CEL(k8s 1.25 beta) as IPV4SubnetSize cannot be updated.
 	IPv4SubnetSize int `json:"ipv4SubnetSize,omitempty"`
 	// Access mode of Subnet, accessible only from within VPC or from outside VPC.
 	// Defaults to private.
 	// +kubebuilder:default:=private
 	// +kubebuilder:validation:Enum=private;public
+	// TODO Add validate webhook or CEL(k8s 1.25 beta) as AccessMode cannot be updated.
 	AccessMode AccessMode `json:"accessMode,omitempty"`
 	// Subnet advanced configuration.
 	AdvancedConfig AdvancedConfig `json:"advancedConfig,omitempty"`
 	// DHCPConfig DHCP configuration.
+	// TODO Add validate webhook or CEL(k8s 1.25 beta) as dhcpConfig cannot be updated.
 	DHCPConfig DHCPConfig `json:"DHCPConfig,omitempty"`
 }
 

@@ -13,7 +13,8 @@ type AccessMode string
 type SubnetSpec struct {
 	// Size of Subnet based upon estimated workload count.
 	// Defaults to 64.
-	// TODO Add validate webhook as IPV4SubnetSize cannot be updated.
+	// TODO Add validate webhook or CEL(k8s 1.25 beta) as IPV4SubnetSize cannot be updated.
+	// TODO https://kubernetes.io/blog/2022/09/29/enforce-immutability-using-cel/
 	// +kubebuilder:default:=64
 	// +kubebuilder:validation:Maximum:=65536
 	// +kubebuilder:validation:Minimum:=16
@@ -22,14 +23,17 @@ type SubnetSpec struct {
 	// Defaults to private.
 	// +kubebuilder:default:=private
 	// +kubebuilder:validation:Enum=private;public
+	// TODO Add validate webhook or CEL(k8s 1.25 beta) as AccessMode cannot be updated.
 	AccessMode AccessMode `json:"accessMode,omitempty"`
 	// Subnet CIDRS.
 	// +kubebuilder:validation:MinItems=0
 	// +kubebuilder:validation:MaxItems=2
+	// TODO Add validate webhook or CEL(k8s 1.25 beta) as ipaddresses cannot be updated.
 	IPAddresses []string `json:"ipAddresses,omitempty"`
 	// Subnet advanced configuration.
 	AdvancedConfig AdvancedConfig `json:"advancedConfig,omitempty"`
 	// DHCPConfig DHCP configuration.
+	// TODO Add validate webhook or CEL(k8s 1.25 beta) as dhcpConfig cannot be updated.
 	DHCPConfig DHCPConfig `json:"DHCPConfig,omitempty"`
 }
 
