@@ -72,6 +72,23 @@ func (r *SubnetReconciler) createSubnet(subnetset *v1alpha1.SubnetSet, name stri
 	}
 }
 
+func (r *SubnetSetReconciler) listSubnets(subnetset *v1alpha1.SubnetSet) (*v1alpha1.SubnetList, error) {
+	subnets := &v1alpha1.SubnetList{}
+	if err := retry.OnError(retry.DefaultRetry, func(err error) bool {
+		return err != nil
+	}, func() error {
+		if err := r.Client.List(context.Background(), subnets,
+			client.MatchingFields{"matadata.ownerReference": string(subnetset.UID)}); err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		log.Error(err, "failed to list subnets", "Namespace", subnetset.Namespace, "Name", subnetset.Name)
+		return nil, err
+	}
+	return subnets, nil
+}
+
 func (r *SubnetSetReconciler) setupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.SubnetSet{}).
