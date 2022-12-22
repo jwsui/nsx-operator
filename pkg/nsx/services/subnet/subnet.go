@@ -68,17 +68,12 @@ func (service *SubnetService) CreateOrUpdateSubnet(obj *v1alpha1.Subnet) error {
 		log.Info("subnet not changed, skip updating", "subnet.Id", *nsxSubnet.Id)
 		return nil
 	}
-	// WrapHighLevelSubnet will modify the input subnet, make a copy for the following store update.
-	subnetCopy := *nsxSubnet
-	infraSubnet, err := service.WrapHierarchySubnet(nsxSubnet)
-	if err != nil {
-		log.Error(err, "WrapHierarchySubnet failed")
+	//TODO replace org/project/vpc
+	if err = service.NSXClient.SubnetClient.Patch("org", "project", "vpc", *nsxSubnet.Id, *nsxSubnet); err != nil {
+		log.Error(err, "failed to patch subnet")
 		return err
 	}
-	if err = service.NSXClient.InfraClient.Patch(*infraSubnet, &EnforceRevisionCheckParam); err != nil {
-		return err
-	}
-	if err = service.SubnetStore.Operate(&subnetCopy); err != nil {
+	if err = service.SubnetStore.Operate(nsxSubnet); err != nil {
 		return err
 	}
 	log.Info("successfully updated nsxSubnet", "nsxSubnet", nsxSubnet)
@@ -104,26 +99,21 @@ func (service *SubnetService) DeleteSubnet(obj interface{}) error {
 		nsxSubnet = &subnets[0]
 	}
 	nsxSubnet.MarkedForDelete = &MarkedForDelete
-	// WrapHighLevelSubnet will modify the input subnet, make a copy for the following store update.
-	subnetCopy := *nsxSubnet
-	infraSubnet, err := service.WrapHierarchySubnet(nsxSubnet)
-	if err != nil {
-		return err
+	if err := service.NSXClient.SubnetClient.Delete("org", "proj", "vpc", *nsxSubnet.Id); err != nil {
+		log.Error(err, "failed to delete subnet")
 	}
-	if err = service.NSXClient.InfraClient.Patch(*infraSubnet, &EnforceRevisionCheckParam); err != nil {
-		return err
-	}
-	if err = service.SubnetStore.Operate(&subnetCopy); err != nil {
+	if err := service.SubnetStore.Operate(nsxSubnet); err != nil {
 		return err
 	}
 	log.Info("successfully deleted  nsxSubnet", "nsxSubnet", nsxSubnet)
 	return nil
 }
 
-// TDOO refactore this function
-func (service *SubnetService) GetAvailableNum(subnet *v1alpha1.Subnet) (int64, error) {
+func (service *SubnetService) GetAvailableIPNum(subnet *v1alpha1.Subnet) (int64, error) {
+	// TODO replace parameter
+	// TODO support checking IPV6 IPAM
 	if subnet.Spec.DHCPConfig.EnableDHCP {
-		if dhcpStats, err := service.NSXClient.DHCPStatsClient.Get("", "", "", "", nil, nil, nil, nil, nil, nil, nil); err != nil {
+		if dhcpStats, err := service.NSXClient.DHCPStatsClient.Get("org", "proj", "", "", nil, nil, nil, nil, nil, nil, nil); err != nil {
 			log.Error(err, "error")
 			return -1, err
 		} else {

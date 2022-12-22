@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	nsxutil "github.com/vmware-tanzu/nsx-operator/pkg/nsx/util"
 	"reflect"
 	"runtime"
 
@@ -21,6 +20,7 @@ import (
 	"github.com/vmware-tanzu/nsx-operator/pkg/metrics"
 	servicecommon "github.com/vmware-tanzu/nsx-operator/pkg/nsx/services/common"
 	"github.com/vmware-tanzu/nsx-operator/pkg/nsx/services/subnet"
+	nsxutil "github.com/vmware-tanzu/nsx-operator/pkg/nsx/util"
 )
 
 var (
@@ -132,7 +132,7 @@ func (r *SubnetReconciler) setSubnetReadyStatusFalse(ctx *context.Context, subne
 			Status:  v1.ConditionFalse,
 			Message: "NSX Subnet could not be created/updated",
 			Reason: fmt.Sprintf(
-				"error occurred while processing the Security Policy CR. Error: %v",
+				"error occurred while processing the Subnet CR. Error: %v",
 				*err,
 			),
 		},

@@ -16,6 +16,7 @@ import (
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/infra/domains/security_policies"
 	dhcp_client "github.com/vmware/vsphere-automation-sdk-go/services/nsxt/orgs/projects/infra/dhcp_server_configs"
 	vpc_search "github.com/vmware/vsphere-automation-sdk-go/services/nsxt/orgs/projects/search"
+	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/orgs/projects/vpcs"
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/orgs/projects/vpcs/subnets"
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/search"
 
@@ -38,6 +39,7 @@ type Client struct {
 	InfraClient     nsx_policy.InfraClient
 	IPPoolClient    subnets.IpPoolsClient
 	DHCPStatsClient dhcp_client.StatsClient
+	SubnetClient    vpcs.SubnetsClient
 
 	NSXChecker    NSXHealthChecker
 	NSXVerChecker NSXVersionChecker
