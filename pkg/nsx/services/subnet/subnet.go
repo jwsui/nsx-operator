@@ -119,3 +119,21 @@ func (service *SubnetService) DeleteSubnet(obj interface{}) error {
 	log.Info("successfully deleted  nsxSubnet", "nsxSubnet", nsxSubnet)
 	return nil
 }
+
+// TDOO refactore this function
+func (service *SubnetService) GetAvailableNum(subnet *v1alpha1.Subnet) (int64, error) {
+	if subnet.Spec.DHCPConfig.EnableDHCP {
+		if dhcpStats, err := service.NSXClient.DHCPStatsClient.Get("", "", "", "", nil, nil, nil, nil, nil, nil, nil); err != nil {
+			log.Error(err, "error")
+			return -1, err
+		} else {
+			return *dhcpStats.IpPoolStats[0].PoolSize - *dhcpStats.IpPoolStats[0].AllocatedNumber, nil
+		}
+	}
+	if ipPool, err := service.NSXClient.IPPoolClient.Get("", "", "", "", ""); err != nil {
+		log.Error(err, "error")
+		return -1, err
+	} else {
+		return *ipPool.PoolUsage.AvailableIps, nil
+	}
+}

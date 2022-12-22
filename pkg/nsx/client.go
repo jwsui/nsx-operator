@@ -14,7 +14,9 @@ import (
 	nsx_policy "github.com/vmware/vsphere-automation-sdk-go/services/nsxt"
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/infra/domains"
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/infra/domains/security_policies"
+	dhcp_client "github.com/vmware/vsphere-automation-sdk-go/services/nsxt/orgs/projects/infra/dhcp_server_configs"
 	vpc_search "github.com/vmware/vsphere-automation-sdk-go/services/nsxt/orgs/projects/search"
+	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/orgs/projects/vpcs/subnets"
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/search"
 
 	"github.com/vmware-tanzu/nsx-operator/pkg/config"
@@ -26,16 +28,19 @@ const (
 )
 
 type Client struct {
-	NsxConfig      *config.NSXOperatorConfig
-	RestConnector  *client.RestConnector
-	QueryClient    search.QueryClient
-	VPCQueryClient vpc_search.QueryClient
-	GroupClient    domains.GroupsClient
-	SecurityClient domains.SecurityPoliciesClient
-	RuleClient     security_policies.RulesClient
-	InfraClient    nsx_policy.InfraClient
-	NSXChecker     NSXHealthChecker
-	NSXVerChecker  NSXVersionChecker
+	NsxConfig       *config.NSXOperatorConfig
+	RestConnector   *client.RestConnector
+	QueryClient     search.QueryClient
+	VPCQueryClient  vpc_search.QueryClient
+	GroupClient     domains.GroupsClient
+	SecurityClient  domains.SecurityPoliciesClient
+	RuleClient      security_policies.RulesClient
+	InfraClient     nsx_policy.InfraClient
+	IPPoolClient    subnets.IpPoolsClient
+	DHCPStatsClient dhcp_client.StatsClient
+
+	NSXChecker    NSXHealthChecker
+	NSXVerChecker NSXVersionChecker
 }
 
 var nsx320Version = [3]int64{3, 2, 0}
