@@ -16,7 +16,6 @@ import (
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/infra/domains/security_policies"
 	dhcp_client "github.com/vmware/vsphere-automation-sdk-go/services/nsxt/orgs/projects/infra/dhcp_server_configs"
 	vpc_search "github.com/vmware/vsphere-automation-sdk-go/services/nsxt/orgs/projects/search"
-	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/orgs/projects/vpcs"
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/orgs/projects/vpcs/subnets"
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/search"
 
@@ -39,7 +38,7 @@ type Client struct {
 	InfraClient     nsx_policy.InfraClient
 	IPPoolClient    subnets.IpPoolsClient
 	DHCPStatsClient dhcp_client.StatsClient
-	SubnetClient    vpcs.SubnetsClient
+	OrgRootClient   nsx_policy.OrgRootClient
 
 	NSXChecker    NSXHealthChecker
 	NSXVerChecker NSXVersionChecker
@@ -84,6 +83,9 @@ func GetClient(cf *config.NSXOperatorConfig) *Client {
 	ruleClient := security_policies.NewRulesClient(restConnector(cluster))
 	infraClient := nsx_policy.NewInfraClient(restConnector(cluster))
 	vpcQueryClient := vpc_search.NewQueryClient(restConnector(cluster))
+	ipPoolClient := subnets.NewIpPoolsClient(restConnector(cluster))
+	dhcpStatsClient := dhcp_client.NewStatsClient(restConnector(cluster))
+	orgRootClient := nsx_policy.NewOrgRootClient(restConnector(cluster))
 	nsxChecker := &NSXHealthChecker{
 		cluster: cluster,
 	}
@@ -93,16 +95,19 @@ func GetClient(cf *config.NSXOperatorConfig) *Client {
 	}
 
 	nsxClient := &Client{
-		NsxConfig:      cf,
-		RestConnector:  restConnector(cluster),
-		QueryClient:    queryClient,
-		GroupClient:    groupClient,
-		SecurityClient: securityClient,
-		RuleClient:     ruleClient,
-		InfraClient:    infraClient,
-		NSXChecker:     *nsxChecker,
-		NSXVerChecker:  *nsxVersionChecker,
-		VPCQueryClient: vpcQueryClient,
+		NsxConfig:       cf,
+		RestConnector:   restConnector(cluster),
+		QueryClient:     queryClient,
+		GroupClient:     groupClient,
+		SecurityClient:  securityClient,
+		RuleClient:      ruleClient,
+		InfraClient:     infraClient,
+		NSXChecker:      *nsxChecker,
+		NSXVerChecker:   *nsxVersionChecker,
+		VPCQueryClient:  vpcQueryClient,
+		IPPoolClient:    ipPoolClient,
+		DHCPStatsClient: dhcpStatsClient,
+		OrgRootClient:   orgRootClient,
 	}
 	// NSX version check will be restarted during SecurityPolicy reconcile
 	// So, it's unnecessary to exit even if failed in the first time
