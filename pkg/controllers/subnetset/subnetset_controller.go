@@ -134,7 +134,7 @@ func (r *SubnetSetReconciler) listSubnets(subnetset *v1alpha1.SubnetSet) (*v1alp
 		return err != nil
 	}, func() error {
 		if err := r.Client.List(context.Background(), subnets,
-			client.MatchingFields{"matadata.ownerReference": string(subnetset.UID)}); err != nil {
+			client.MatchingFields{"metadata.ownerReferences": string(subnetset.UID)}); err != nil {
 			return err
 		}
 		return nil
@@ -152,7 +152,7 @@ func (r *SubnetSetReconciler) deleteSubnets(subnetset *v1alpha1.SubnetSet) error
 		return err != nil
 	}, func() error {
 		if err := r.Client.List(context.Background(), subnets,
-			client.MatchingFields{"matadata.ownerReference": string(subnetset.UID)}); err != nil {
+			client.MatchingFields{"metadata.ownerReferences": string(subnetset.UID)}); err != nil {
 			return err
 		}
 		for _, subnet := range subnets.Items {
@@ -279,6 +279,16 @@ func getExistingConditionOfType(conditionType v1alpha1.ConditionType, existingCo
 }
 
 func (r *SubnetSetReconciler) setupWithManager(mgr ctrl.Manager) error {
+	cache := mgr.GetCache()
+	indexFunc := func(obj client.Object) []string {
+		if len(obj.(*v1alpha1.Subnet).ObjectMeta.OwnerReferences) == 0 {
+			return []string{"no-owner"}
+		}
+		return []string{string(obj.(*v1alpha1.Subnet).ObjectMeta.OwnerReferences[0].UID)}
+	}
+	if err := cache.IndexField(context.Background(), &v1alpha1.Subnet{}, "metadata.ownerReferences", indexFunc); err != nil {
+		panic(err)
+	}
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.SubnetSet{}).
 		WithOptions(controller.Options{
