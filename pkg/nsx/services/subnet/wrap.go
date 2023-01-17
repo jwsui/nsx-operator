@@ -1,9 +1,6 @@
 package subnet
 
 import (
-	"errors"
-	"strings"
-
 	"github.com/vmware/vsphere-automation-sdk-go/runtime/data"
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/model"
 
@@ -17,39 +14,35 @@ import (
 // for this convenience we can no longer CRUD CR separately, and reduce the number of API calls to NSX-T.
 
 // WrapHierarchySubnet Wrap the subnet for InfraClient to patch.
-func (service *SubnetService) WrapHierarchySubnet(subnet *model.VpcSubnet) (*model.OrgRoot, error) {
-	if orgRoot, err := service.wrapOrgRoot(subnet); err != nil {
+func (service *SubnetService) WrapHierarchySubnet(subnet *model.VpcSubnet, orgID, projectID, vpcID string) (*model.OrgRoot, error) {
+	if orgRoot, err := service.wrapOrgRoot(subnet, orgID, projectID, vpcID); err != nil {
 		return nil, err
 	} else {
 		return orgRoot, nil
 	}
 }
 
-func (service *SubnetService) wrapOrgRoot(subnet *model.VpcSubnet) (*model.OrgRoot, error) {
+func (service *SubnetService) wrapOrgRoot(subnet *model.VpcSubnet, orgID, projectID, vpcID string) (*model.OrgRoot, error) {
 	// This is the outermost layer of the hierarchy subnet.
 	// It doesn't need ID field.
 	resourceType := "OrgRoot"
-	children, err := service.wrapProject(subnet)
+	children, err := service.wrapProject(subnet, projectID, vpcID)
 	if err != nil {
 		return nil, err
 	}
 	orgRoot := model.OrgRoot{
 		Children:     children,
 		ResourceType: &resourceType,
+		Id:           &orgID,
 	}
 	return &orgRoot, nil
 }
 
-func (service *SubnetService) wrapProject(subnet *model.VpcSubnet) ([]*data.StructValue, error) {
-	children, err := service.wrapVPC(subnet)
+func (service *SubnetService) wrapProject(subnet *model.VpcSubnet, projectID, vpcID string) ([]*data.StructValue, error) {
+	children, err := service.wrapVPC(subnet, vpcID)
 	if err != nil {
 		return nil, err
 	}
-	path := strings.Split(*subnet.ParentPath, "/")
-	if len(path) < 3 {
-		return nil, errors.New("failed to retrieve VPC id from VPCSubnet")
-	}
-	projectID := path[len(path)-3]
 	targetType := "Project"
 	childProject := model.ChildResourceReference{
 		Id:           &projectID,
@@ -64,16 +57,11 @@ func (service *SubnetService) wrapProject(subnet *model.VpcSubnet) ([]*data.Stru
 	return []*data.StructValue{dataValue.(*data.StructValue)}, nil
 }
 
-func (service *SubnetService) wrapVPC(subnet *model.VpcSubnet) ([]*data.StructValue, error) {
+func (service *SubnetService) wrapVPC(subnet *model.VpcSubnet, vpcID string) ([]*data.StructValue, error) {
 	children, err := service.wrapSubnet(subnet)
 	if err != nil {
 		return nil, err
 	}
-	path := strings.Split(*subnet.ParentPath, "/")
-	if len(path) == 0 {
-		return nil, errors.New("failed to retrieve VPC id from VPCSubnet")
-	}
-	vpcID := path[len(path)-1]
 	targetType := "Vpc"
 	childVPC := model.ChildResourceReference{
 		Id:           &vpcID,

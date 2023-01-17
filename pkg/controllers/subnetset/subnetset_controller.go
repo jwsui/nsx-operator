@@ -9,8 +9,10 @@ import (
 	"runtime"
 
 	v1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apimachineryruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,6 +34,8 @@ var (
 	ResultRequeue           = common.ResultRequeue
 	ResultRequeueAfter5mins = common.ResultRequeueAfter5mins
 	MetricResTypeSubnetSet  = common.MetricResTypeSubnetSet
+	//TODO rename this
+	defaultSubnet = "default-subnet"
 )
 
 // SubnetSetReconciler reconciles a SubnetSet object
@@ -62,7 +66,22 @@ func (r *SubnetSetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			}
 			log.V(1).Info("added finalizer on subnetset CR", "subnetset", req.NamespacedName)
 		}
-		// TODO create subnet for subnetport.
+
+		// TODO Only for local test, Create default Subnet for SubnetSet.
+		subnet := &v1alpha1.Subnet{}
+		subnetKey := types.NamespacedName{
+			Namespace: req.Namespace,
+			Name:      defaultSubnet,
+		}
+		if err := r.Client.Get(ctx, subnetKey, subnet); err != nil {
+			if !apierrors.IsNotFound(err) {
+				log.Error(err, "failed to get default subnet", "subnet", subnetKey)
+				updateFail(r, &ctx, obj, &err)
+				return ResultRequeue, err
+			}
+			r.createSubnet(obj, defaultSubnet)
+		}
+
 		if err := r.updateSubnetSetStatus(obj); err != nil {
 			log.Error(err, "update subnetset status failed, would retry exponentially", "subnetset", req.NamespacedName)
 			updateFail(r, &ctx, obj, &err)
@@ -134,7 +153,7 @@ func (r *SubnetSetReconciler) listSubnets(subnetset *v1alpha1.SubnetSet) (*v1alp
 		return err != nil
 	}, func() error {
 		if err := r.Client.List(context.Background(), subnets,
-			client.MatchingFields{"matadata.ownerReference": string(subnetset.UID)}); err != nil {
+			client.MatchingFields{"metadata.ownerReferences": string(subnetset.UID)}); err != nil {
 			return err
 		}
 		return nil
@@ -152,7 +171,7 @@ func (r *SubnetSetReconciler) deleteSubnets(subnetset *v1alpha1.SubnetSet) error
 		return err != nil
 	}, func() error {
 		if err := r.Client.List(context.Background(), subnets,
-			client.MatchingFields{"matadata.ownerReference": string(subnetset.UID)}); err != nil {
+			client.MatchingFields{"metadata.ownerReferences": string(subnetset.UID)}); err != nil {
 			return err
 		}
 		for _, subnet := range subnets.Items {
@@ -279,6 +298,16 @@ func getExistingConditionOfType(conditionType v1alpha1.ConditionType, existingCo
 }
 
 func (r *SubnetSetReconciler) setupWithManager(mgr ctrl.Manager) error {
+	cache := mgr.GetCache()
+	indexFunc := func(obj client.Object) []string {
+		if len(obj.(*v1alpha1.Subnet).ObjectMeta.OwnerReferences) == 0 {
+			return []string{"no-owner"}
+		}
+		return []string{string(obj.(*v1alpha1.Subnet).ObjectMeta.OwnerReferences[0].UID)}
+	}
+	if err := cache.IndexField(context.Background(), &v1alpha1.Subnet{}, "metadata.ownerReferences", indexFunc); err != nil {
+		panic(err)
+	}
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.SubnetSet{}).
 		WithOptions(controller.Options{
