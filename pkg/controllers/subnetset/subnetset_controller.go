@@ -35,7 +35,7 @@ var (
 	ResultRequeueAfter5mins = common.ResultRequeueAfter5mins
 	MetricResTypeSubnetSet  = common.MetricResTypeSubnetSet
 	//TODO rename this
-	defaultSubnet = "defaultSubnet"
+	defaultSubnet = "default-subnet"
 )
 
 // SubnetSetReconciler reconciles a SubnetSet object
