@@ -29,6 +29,9 @@ var (
 	ResultRequeue           = common.ResultRequeue
 	ResultRequeueAfter5mins = common.ResultRequeueAfter5mins
 	MetricResTypeSubnet     = common.MetricResTypeSubnet
+	//TODO Hardcode value only for local test
+	projectID = "dy_project_1"
+	vpcID     = "vpc_test_1"
 )
 
 // SubnetReconciler reconciles a SubnetSet object
@@ -60,7 +63,7 @@ func (r *SubnetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 			log.V(1).Info("added finalizer on subnet CR", "subnet", req.NamespacedName)
 		}
 		//TODO add project and vpc id
-		if err := r.Service.CreateOrUpdateSubnet(obj, "projectID", "vpcID"); err != nil {
+		if err := r.Service.CreateOrUpdateSubnet(obj, projectID, vpcID); err != nil {
 			log.Error(err, "operate failed, would retry exponentially", "subnet", req.NamespacedName)
 			updateFail(r, &ctx, obj, &err)
 			return ResultRequeue, err
@@ -75,7 +78,7 @@ func (r *SubnetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		if controllerutil.ContainsFinalizer(obj, servicecommon.FinalizerName) {
 			metrics.CounterInc(r.Service.NSXConfig, metrics.ControllerDeleteTotal, MetricResTypeSubnet)
 			//TODO add project and vpc id
-			if err := r.Service.DeleteSubnet(obj.UID, "projectID", "vpcID"); err != nil {
+			if err := r.Service.DeleteSubnet(obj.UID, projectID, vpcID); err != nil {
 				log.Error(err, "deletion failed, would retry exponentially", "subnet", req.NamespacedName)
 				deleteFail(r, &ctx, obj, &err)
 				return ResultRequeue, err

@@ -67,7 +67,7 @@ func (r *SubnetSetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			log.V(1).Info("added finalizer on subnetset CR", "subnetset", req.NamespacedName)
 		}
 
-		// Create default Subnet for SubnetSet, only for local test.
+		// TODO Only for local test, Create default Subnet for SubnetSet.
 		subnet := &v1alpha1.Subnet{}
 		subnetKey := types.NamespacedName{
 			Namespace: req.Namespace,
