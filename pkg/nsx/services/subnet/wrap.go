@@ -26,16 +26,34 @@ func (service *SubnetService) wrapOrgRoot(subnet *model.VpcSubnet, orgID, projec
 	// This is the outermost layer of the hierarchy subnet.
 	// It doesn't need ID field.
 	resourceType := "OrgRoot"
-	children, err := service.wrapProject(subnet, projectID, vpcID)
+	children, err := service.wrapOrg(subnet, orgID, projectID, vpcID)
 	if err != nil {
 		return nil, err
 	}
 	orgRoot := model.OrgRoot{
 		Children:     children,
 		ResourceType: &resourceType,
-		Id:           &orgID,
 	}
 	return &orgRoot, nil
+}
+
+func (service *SubnetService) wrapOrg(subnet *model.VpcSubnet, orgID, projectID, vpcID string) ([]*data.StructValue, error) {
+	children, err := service.wrapProject(subnet, projectID, vpcID)
+	if err != nil {
+		return nil, err
+	}
+	targetType := "Org"
+	childProject := model.ChildResourceReference{
+		Id:           &orgID,
+		ResourceType: "ChildResourceReference",
+		TargetType:   &targetType,
+		Children:     children,
+	}
+	dataValue, errors := NewConverter().ConvertToVapi(childProject, model.ChildResourceReferenceBindingType())
+	if len(errors) > 0 {
+		return nil, errors[0]
+	}
+	return []*data.StructValue{dataValue.(*data.StructValue)}, nil
 }
 
 func (service *SubnetService) wrapProject(subnet *model.VpcSubnet, projectID, vpcID string) ([]*data.StructValue, error) {
