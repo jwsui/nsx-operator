@@ -84,8 +84,6 @@ func (service *SubnetService) CreateOrUpdateSubnet(obj *v1alpha1.Subnet, project
 		log.Info("subnet not changed, skip updating", "subnet.Id", *nsxSubnet.Id)
 		return nil
 	}
-	// WrapHighLevelSubnet will modify the input subnet, make a copy for the following store update.
-	subnetCopy := *nsxSubnet
 	// TODO Hardcode orgID=default
 	orgRoot, err := service.WrapHierarchySubnet(nsxSubnet, "default", projectID, vpcID)
 	if err != nil {
@@ -95,7 +93,12 @@ func (service *SubnetService) CreateOrUpdateSubnet(obj *v1alpha1.Subnet, project
 	if err = service.NSXClient.OrgRootClient.Patch(*orgRoot, &EnforceRevisionCheckParam); err != nil {
 		return err
 	}
-	if err = service.SubnetStore.Operate(&subnetCopy); err != nil {
+	// TODO Hardcode ordID=default
+	// Get Subnet from NSX after patch operation as NSX renders several fields like `path`/`parent_path`.
+	if *nsxSubnet, err = service.NSXClient.SubnetsClient.Get("default", projectID, vpcID, *nsxSubnet.Id); err != nil {
+		return err
+	}
+	if err = service.SubnetStore.Operate(nsxSubnet); err != nil {
 		return err
 	}
 	log.Info("successfully updated nsxSubnet", "nsxSubnet", nsxSubnet)
