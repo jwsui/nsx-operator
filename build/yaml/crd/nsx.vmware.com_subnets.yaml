@@ -69,12 +69,12 @@ spec:
                     type: boolean
                 type: object
               accessMode:
-                default: private
+                default: Private
                 description: Access mode of Subnet, accessible only from within VPC
                   or from outside VPC. Defaults to private.
                 enum:
-                - private
-                - public
+                - Private
+                - Public
                 type: string
               advancedConfig:
                 description: Subnet advanced configuration.
