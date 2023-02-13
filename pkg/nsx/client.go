@@ -5,6 +5,7 @@ package nsx
 
 import (
 	"errors"
+	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/orgs/projects/vpcs"
 	"net/http"
 	"strings"
 
@@ -39,6 +40,7 @@ type Client struct {
 	IPPoolClient    subnets.IpPoolsClient
 	DHCPStatsClient dhcp_client.StatsClient
 	OrgRootClient   nsx_policy.OrgRootClient
+	SubnetsClient   vpcs.SubnetsClient
 
 	NSXChecker    NSXHealthChecker
 	NSXVerChecker NSXVersionChecker
@@ -86,6 +88,7 @@ func GetClient(cf *config.NSXOperatorConfig) *Client {
 	ipPoolClient := subnets.NewIpPoolsClient(restConnector(cluster))
 	dhcpStatsClient := dhcp_client.NewStatsClient(restConnector(cluster))
 	orgRootClient := nsx_policy.NewOrgRootClient(restConnector(cluster))
+	subnetsClient := vpcs.NewSubnetsClient(restConnector(cluster))
 	nsxChecker := &NSXHealthChecker{
 		cluster: cluster,
 	}
@@ -108,6 +111,7 @@ func GetClient(cf *config.NSXOperatorConfig) *Client {
 		IPPoolClient:    ipPoolClient,
 		DHCPStatsClient: dhcpStatsClient,
 		OrgRootClient:   orgRootClient,
+		SubnetsClient:   subnetsClient,
 	}
 	// NSX version check will be restarted during SecurityPolicy reconcile
 	// So, it's unnecessary to exit even if failed in the first time
