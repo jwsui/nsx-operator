@@ -14,15 +14,15 @@ import (
 // for this convenience we can no longer CRUD CR separately, and reduce the number of API calls to NSX-T.
 
 // WrapHierarchySubnet Wrap the subnet for InfraClient to patch.
-func (service *SubnetService) WrapHierarchySubnet(subnet *model.VpcSubnet, projectID, vpcID string) (*model.OrgRoot, error) {
-	if orgRoot, err := service.wrapOrgRoot(subnet, projectID, vpcID); err != nil {
+func (service *SubnetService) WrapHierarchySubnet(subnet *model.VpcSubnet, orgID, projectID, vpcID string) (*model.OrgRoot, error) {
+	if orgRoot, err := service.wrapOrgRoot(subnet, orgID, projectID, vpcID); err != nil {
 		return nil, err
 	} else {
 		return orgRoot, nil
 	}
 }
 
-func (service *SubnetService) wrapOrgRoot(subnet *model.VpcSubnet, projectID, vpcID string) (*model.OrgRoot, error) {
+func (service *SubnetService) wrapOrgRoot(subnet *model.VpcSubnet, orgID, projectID, vpcID string) (*model.OrgRoot, error) {
 	// This is the outermost layer of the hierarchy subnet.
 	// It doesn't need ID field.
 	resourceType := "OrgRoot"
@@ -33,6 +33,7 @@ func (service *SubnetService) wrapOrgRoot(subnet *model.VpcSubnet, projectID, vp
 	orgRoot := model.OrgRoot{
 		Children:     children,
 		ResourceType: &resourceType,
+		Id:           &orgID,
 	}
 	return &orgRoot, nil
 }
