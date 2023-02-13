@@ -12,7 +12,7 @@ import (
 	"github.com/vmware-tanzu/nsx-operator/pkg/apis/v1alpha1"
 )
 
-var defaultSubnets = []string{"DefaultVMSubnetSet", "DefaultPodSubnetSet"}
+var defaultSubnetSets = []string{"DefaultVMSubnetSet", "DefaultPodSubnetSet"}
 
 type VPCHandler struct {
 	Client client.Client
@@ -22,7 +22,7 @@ func (h *VPCHandler) Create(e event.CreateEvent, _ workqueue.RateLimitingInterfa
 	ns := e.Object.GetNamespace()
 	name := e.Object.GetName()
 	log.Info("creating default Subnetset for VPC", "Namespace", ns, "Name", name)
-	for _, subnetSet := range defaultSubnets {
+	for _, subnetSet := range defaultSubnetSets {
 		if err := retry.OnError(retry.DefaultRetry, func(err error) bool {
 			return err != nil
 		}, func() error {
@@ -46,7 +46,7 @@ func (h *VPCHandler) Create(e event.CreateEvent, _ workqueue.RateLimitingInterfa
 func (h *VPCHandler) Delete(e event.DeleteEvent, _ workqueue.RateLimitingInterface) {
 	ns := e.Object.GetName()
 	log.Info("cleaning default Subnetset for VPC", "Namespace", e.Object.GetName())
-	for _, subnetSet := range defaultSubnets {
+	for _, subnetSet := range defaultSubnetSets {
 		if err := retry.OnError(retry.DefaultRetry, func(err error) bool {
 			return err != nil
 		}, func() error {

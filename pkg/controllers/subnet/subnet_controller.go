@@ -59,7 +59,8 @@ func (r *SubnetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 			}
 			log.V(1).Info("added finalizer on subnet CR", "subnet", req.NamespacedName)
 		}
-		if err := r.Service.CreateOrUpdateSubnet(obj); err != nil {
+		//TODO add project and vpc id
+		if err := r.Service.CreateOrUpdateSubnet(obj, "projectID", "vpcID"); err != nil {
 			log.Error(err, "operate failed, would retry exponentially", "subnet", req.NamespacedName)
 			updateFail(r, &ctx, obj, &err)
 			return ResultRequeue, err
@@ -73,7 +74,8 @@ func (r *SubnetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	} else {
 		if controllerutil.ContainsFinalizer(obj, servicecommon.FinalizerName) {
 			metrics.CounterInc(r.Service.NSXConfig, metrics.ControllerDeleteTotal, MetricResTypeSubnet)
-			if err := r.Service.DeleteSubnet(obj.UID); err != nil {
+			//TODO add project and vpc id
+			if err := r.Service.DeleteSubnet(obj.UID, "projectID", "vpcID"); err != nil {
 				log.Error(err, "deletion failed, would retry exponentially", "subnet", req.NamespacedName)
 				deleteFail(r, &ctx, obj, &err)
 				return ResultRequeue, err

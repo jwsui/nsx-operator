@@ -72,7 +72,7 @@ func InitializeSubnetService(service common.Service) (*SubnetService, error) {
 	return subnetService, nil
 }
 
-func (service *SubnetService) CreateOrUpdateSubnet(obj *v1alpha1.Subnet) error {
+func (service *SubnetService) CreateOrUpdateSubnet(obj *v1alpha1.Subnet, projectID, vpcID string) error {
 	nsxSubnet, err := service.buildSubnet(obj)
 	if err != nil {
 		log.Error(err, "failed to build Subnet")
@@ -86,7 +86,7 @@ func (service *SubnetService) CreateOrUpdateSubnet(obj *v1alpha1.Subnet) error {
 	}
 	// WrapHighLevelSubnet will modify the input subnet, make a copy for the following store update.
 	subnetCopy := *nsxSubnet
-	orgRoot, err := service.WrapHierarchySubnet(nsxSubnet)
+	orgRoot, err := service.WrapHierarchySubnet(nsxSubnet, projectID, vpcID)
 	if err != nil {
 		log.Error(err, "WrapHierarchySubnet failed")
 		return err
@@ -101,7 +101,7 @@ func (service *SubnetService) CreateOrUpdateSubnet(obj *v1alpha1.Subnet) error {
 	return nil
 }
 
-func (service *SubnetService) DeleteSubnet(obj interface{}) error {
+func (service *SubnetService) DeleteSubnet(obj interface{}, projectID, vpcID string) error {
 	var nsxSubnet *model.VpcSubnet
 	switch subnet := obj.(type) {
 	case *v1alpha1.Subnet:
@@ -122,7 +122,7 @@ func (service *SubnetService) DeleteSubnet(obj interface{}) error {
 	nsxSubnet.MarkedForDelete = &MarkedForDelete
 	// WrapHighLevelSubnet will modify the input subnet, make a copy for the following store update.
 	subnetCopy := *nsxSubnet
-	orgRoot, err := service.WrapHierarchySubnet(nsxSubnet)
+	orgRoot, err := service.WrapHierarchySubnet(nsxSubnet, projectID, vpcID)
 	if err != nil {
 		return err
 	}
