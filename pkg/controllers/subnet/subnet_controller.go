@@ -7,6 +7,7 @@ import (
 	"os"
 	"reflect"
 	"runtime"
+	"strings"
 
 	v1 "k8s.io/api/core/v1"
 	apimachineryruntime "k8s.io/apimachinery/pkg/runtime"
@@ -41,6 +42,13 @@ type SubnetReconciler struct {
 	Service *subnet.SubnetService
 }
 
+// SubnetParameters stores parameters to CRUD Subnet object
+type SubnetParameters struct {
+	OrgID     string
+	ProjectID string
+	VPCID     string
+}
+
 func (r *SubnetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	obj := &v1alpha1.Subnet{}
 	log.Info("reconciling subnet CR", "subnet", req.NamespacedName)
@@ -51,6 +59,10 @@ func (r *SubnetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		return ResultNormal, client.IgnoreNotFound(err)
 	}
 
+	parameters, err := r.getSubnetParameters(obj)
+	if err != nil {
+		return ResultRequeue, err
+	}
 	if obj.ObjectMeta.DeletionTimestamp.IsZero() {
 		metrics.CounterInc(r.Service.NSXConfig, metrics.ControllerUpdateTotal, MetricResTypeSubnet)
 		if !controllerutil.ContainsFinalizer(obj, servicecommon.FinalizerName) {
@@ -63,7 +75,7 @@ func (r *SubnetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 			log.V(1).Info("added finalizer on subnet CR", "subnet", req.NamespacedName)
 		}
 		//TODO add project and vpc id
-		if err := r.Service.CreateOrUpdateSubnet(obj, projectID, vpcID); err != nil {
+		if err := r.Service.CreateOrUpdateSubnet(obj, parameters.OrgID, parameters.ProjectID, parameters.VPCID); err != nil {
 			log.Error(err, "operate failed, would retry exponentially", "subnet", req.NamespacedName)
 			updateFail(r, &ctx, obj, &err)
 			return ResultRequeue, err
@@ -78,7 +90,7 @@ func (r *SubnetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		if controllerutil.ContainsFinalizer(obj, servicecommon.FinalizerName) {
 			metrics.CounterInc(r.Service.NSXConfig, metrics.ControllerDeleteTotal, MetricResTypeSubnet)
 			//TODO add project and vpc id
-			if err := r.Service.DeleteSubnet(obj.UID, projectID, vpcID); err != nil {
+			if err := r.Service.DeleteSubnet(obj.UID, parameters.OrgID, parameters.ProjectID, parameters.VPCID); err != nil {
 				log.Error(err, "deletion failed, would retry exponentially", "subnet", req.NamespacedName)
 				deleteFail(r, &ctx, obj, &err)
 				return ResultRequeue, err
@@ -96,6 +108,22 @@ func (r *SubnetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		}
 	}
 	return ctrl.Result{}, nil
+}
+
+func (r *SubnetReconciler) getSubnetParameters(obj *v1alpha1.Subnet) (*SubnetParameters, error) {
+	vpcList := &v1alpha1.VPCList{}
+	if err := r.Client.List(context.Background(), vpcList, client.InNamespace(obj.Namespace)); err != nil {
+		log.Error(err, fmt.Sprintf("failed to get VPC under namespace: %s.\n", obj.Namespace))
+		//TODO Handle error
+		return nil, err
+	}
+	// Only one VPC under each namespace.
+	nsxResourcePatch := vpcList.Items[0].Status.NSXResourcePath
+	return &SubnetParameters{
+		OrgID:     strings.Split(nsxResourcePatch, "/")[len(nsxResourcePatch)-5],
+		ProjectID: strings.Split(nsxResourcePatch, "/")[len(nsxResourcePatch)-3],
+		VPCID:     strings.Split(nsxResourcePatch, "/")[len(nsxResourcePatch)-1],
+	}, nil
 }
 
 func (r *SubnetReconciler) updateSubnetStatus(obj *v1alpha1.Subnet) error {

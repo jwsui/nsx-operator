@@ -72,7 +72,7 @@ func InitializeSubnetService(service common.Service) (*SubnetService, error) {
 	return subnetService, nil
 }
 
-func (service *SubnetService) CreateOrUpdateSubnet(obj *v1alpha1.Subnet, projectID, vpcID string) error {
+func (service *SubnetService) CreateOrUpdateSubnet(obj *v1alpha1.Subnet, orgID, projectID, vpcID string) error {
 	nsxSubnet, err := service.buildSubnet(obj)
 	if err != nil {
 		log.Error(err, "failed to build Subnet")
@@ -85,7 +85,7 @@ func (service *SubnetService) CreateOrUpdateSubnet(obj *v1alpha1.Subnet, project
 		return nil
 	}
 	// TODO Hardcode orgID=default
-	orgRoot, err := service.WrapHierarchySubnet(nsxSubnet, "default", projectID, vpcID)
+	orgRoot, err := service.WrapHierarchySubnet(nsxSubnet, orgID, projectID, vpcID)
 	if err != nil {
 		log.Error(err, "WrapHierarchySubnet failed")
 		return err
@@ -95,7 +95,7 @@ func (service *SubnetService) CreateOrUpdateSubnet(obj *v1alpha1.Subnet, project
 	}
 	// TODO Hardcode ordID=default
 	// Get Subnet from NSX after patch operation as NSX renders several fields like `path`/`parent_path`.
-	if *nsxSubnet, err = service.NSXClient.SubnetsClient.Get("default", projectID, vpcID, *nsxSubnet.Id); err != nil {
+	if *nsxSubnet, err = service.NSXClient.SubnetsClient.Get(orgID, projectID, vpcID, *nsxSubnet.Id); err != nil {
 		return err
 	}
 	if err = service.SubnetStore.Operate(nsxSubnet); err != nil {
@@ -105,7 +105,7 @@ func (service *SubnetService) CreateOrUpdateSubnet(obj *v1alpha1.Subnet, project
 	return nil
 }
 
-func (service *SubnetService) DeleteSubnet(obj interface{}, projectID, vpcID string) error {
+func (service *SubnetService) DeleteSubnet(obj interface{}, orgID, projectID, vpcID string) error {
 	var nsxSubnet *model.VpcSubnet
 	switch subnet := obj.(type) {
 	case *v1alpha1.Subnet:
@@ -127,7 +127,7 @@ func (service *SubnetService) DeleteSubnet(obj interface{}, projectID, vpcID str
 	// WrapHighLevelSubnet will modify the input subnet, make a copy for the following store update.
 	subnetCopy := *nsxSubnet
 	// TODO Hardcode orgID=default
-	orgRoot, err := service.WrapHierarchySubnet(nsxSubnet, "default", projectID, vpcID)
+	orgRoot, err := service.WrapHierarchySubnet(nsxSubnet, orgID, projectID, vpcID)
 	if err != nil {
 		return err
 	}
