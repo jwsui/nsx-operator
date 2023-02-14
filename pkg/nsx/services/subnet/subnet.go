@@ -141,8 +141,8 @@ func (service *SubnetService) DeleteSubnet(obj interface{}, orgID, projectID, vp
 	return nil
 }
 
-//TODO refactore this function
-func (service *SubnetService) GetAvailableNum(subnet *v1alpha1.Subnet) (int64, error) {
+// GetAvailableIPNum TODO: need refactor
+func (service *SubnetService) GetAvailableIPNum(subnet *v1alpha1.Subnet) (int64, error) {
 	if subnet.Spec.DHCPConfig.EnableDHCP {
 		if dhcpStats, err := service.NSXClient.DHCPStatsClient.Get("", "", "", "", nil, nil, nil, nil, nil, nil, nil); err != nil {
 			log.Error(err, "error")

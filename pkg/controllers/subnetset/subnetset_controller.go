@@ -112,7 +112,8 @@ func (r *SubnetSetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 }
 
 // createSubnet creates subnet managed by subnetset
-func (r *SubnetSetReconciler) createSubnet(subnetset *v1alpha1.SubnetSet, name string) {
+func (r *SubnetSetReconciler) createSubnet(subnetset *v1alpha1.SubnetSet, name string) (*v1alpha1.Subnet, error) {
+	var subnet *v1alpha1.Subnet
 	if err := retry.OnError(retry.DefaultRetry, func(err error) bool {
 		return err != nil
 	}, func() error {
@@ -140,10 +141,39 @@ func (r *SubnetSetReconciler) createSubnet(subnetset *v1alpha1.SubnetSet, name s
 		if err := r.Client.Create(context.Background(), obj); err != nil {
 			return err
 		}
+		subnet = obj
 		return nil
 	}); err != nil {
 		log.Error(err, "failed to create subnet", "Namespace", subnetset.Namespace, "Name", name)
+		return nil, err
 	}
+	return subnet, nil
+}
+
+// getAvailableSubnets returns available Subnet under SubnetSet, and creates Subnet if necessary.
+func (r *SubnetSetReconciler) getAvailableSubnet(subnetSet *v1alpha1.SubnetSet) (*v1alpha1.Subnet, error) {
+	subnetList, err := r.listSubnets(subnetSet)
+	if err != nil {
+		return nil, err
+	}
+	var allocatedSubnet *v1alpha1.Subnet
+	for _, subnet := range subnetList.Items {
+		if nums, _ := r.Service.GetAvailableIPNum(&subnet); nums > 0 {
+			allocatedSubnet = &subnet
+			break
+		}
+	}
+	if allocatedSubnet == nil {
+		log.Info("no available subnet found, creating new subnet")
+		// TODO generate subnet name here
+		subnet, err := r.createSubnet(subnetSet, "subnetName")
+		if err != nil {
+			log.Error(err, "failed to create Subnet")
+			return nil, err
+		}
+		allocatedSubnet = subnet
+	}
+	return allocatedSubnet, nil
 }
 
 // listSubnets lists all subnets under subnetset
@@ -315,6 +345,7 @@ func (r *SubnetSetReconciler) setupWithManager(mgr ctrl.Manager) error {
 		}).
 		Watches(&source.Kind{Type: &v1.Namespace{}}, &NamespaceHandler{Client: mgr.GetClient()}).
 		Watches(&source.Kind{Type: &v1alpha1.VPC{}}, &VPCHandler{Client: mgr.GetClient()}).
+		Watches(&source.Kind{Type: &v1alpha1.SubnetPort{}}, &SubnetPortHandler{Reconciler: r}).
 		Complete(r)
 }
 
