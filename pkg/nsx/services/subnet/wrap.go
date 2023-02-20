@@ -109,8 +109,7 @@ func (service *SubnetService) wrapSubnet(subnet *model.VpcSubnet) ([]*data.Struc
 	return []*data.StructValue{dataValue.(*data.StructValue)}, nil
 }
 
-// wrapSegmentPort wraps SegmentPort as children of VPCSubnet.
-// A reserved function for creating SegmentPorts, currently not used.
+// wrapDHCPStaticBindingConfig wraps DHCPStaticBindingConfig as children of VPCSubnet.
 func (service *SubnetService) wrapDHCPStaticBindingConfig(config model.DhcpStaticBindingConfig) ([]*data.StructValue, error) {
 	configValue, errors := NewConverter().ConvertToVapi(config, model.ChildDhcpStaticBindingConfigBindingType())
 	if len(errors) > 0 {

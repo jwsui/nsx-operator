@@ -7,6 +7,7 @@ import (
 	"os"
 	"reflect"
 	"runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -343,9 +344,13 @@ func (r *SubnetSetReconciler) setupWithManager(mgr ctrl.Manager) error {
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: runtime.NumCPU(),
 		}).
-		Watches(&source.Kind{Type: &v1.Namespace{}}, &NamespaceHandler{Client: mgr.GetClient()}).
-		Watches(&source.Kind{Type: &v1alpha1.VPC{}}, &VPCHandler{Client: mgr.GetClient()}).
-		Watches(&source.Kind{Type: &v1alpha1.SubnetPort{}}, &SubnetPortHandler{Reconciler: r}).
+		Watches(&source.Kind{Type: &v1alpha1.VPC{}},
+			&VPCHandler{Client: mgr.GetClient()},
+			builder.WithPredicates(VPCPredicate)).
+		Watches(
+			&source.Kind{Type: &v1alpha1.SubnetPort{}},
+			&SubnetPortHandler{Reconciler: r},
+			builder.WithPredicates(SubnetPortPredicate)).
 		Complete(r)
 }
 

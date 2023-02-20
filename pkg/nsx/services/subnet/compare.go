@@ -8,9 +8,10 @@ import (
 )
 
 type (
-	Subnet     model.VpcSubnet
-	Comparable common.Comparable
+	Subnet model.VpcSubnet
 )
+
+type Comparable = common.Comparable
 
 func (subnet *Subnet) Key() string {
 	return *subnet.Id

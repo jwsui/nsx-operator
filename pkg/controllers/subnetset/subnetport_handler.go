@@ -2,6 +2,7 @@ package subnetset
 
 import (
 	"context"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
@@ -9,6 +10,13 @@ import (
 
 	"github.com/vmware-tanzu/nsx-operator/pkg/apis/v1alpha1"
 )
+
+// SubnetPortHandler supports lazy-creation of Subnet, the first Subnet won't
+// be created until there is a SubnetPort attached to it.
+// - SubnetPort creation: get available Subnet for the SubnetPort, create new
+//   Subnet if necessary.
+// - SubnetPort deletion: if recycling Subnet is required, delete Subnets without
+// SubnetPort attached to it.
 
 type SubnetPortHandler struct {
 	Reconciler *SubnetSetReconciler
@@ -54,4 +62,20 @@ func (h *SubnetPortHandler) Generic(_ event.GenericEvent, _ workqueue.RateLimiti
 
 func (h *SubnetPortHandler) Update(_ event.UpdateEvent, _ workqueue.RateLimitingInterface) {
 	log.V(4).Info("SubnetPort update event, do nothing")
+}
+
+var SubnetPortPredicate = predicate.Funcs{
+	CreateFunc: func(e event.CreateEvent) bool {
+		return true
+	},
+	UpdateFunc: func(e event.UpdateEvent) bool {
+		return false
+	},
+	DeleteFunc: func(e event.DeleteEvent) bool {
+		// TODO When recycling Subnet is required, return true.
+		return false
+	},
+	GenericFunc: func(genericEvent event.GenericEvent) bool {
+		return false
+	},
 }

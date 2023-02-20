@@ -27,15 +27,19 @@ type SubnetService struct {
 }
 
 var subnetService *SubnetService
+var lock = &sync.Mutex{}
 
 // GetSubnetService get singleton SubnetService instance, subnet/subnetset controller share the same instance.
-// GetSubnetService isn't thread-safe.
 func GetSubnetService(service common.Service) *SubnetService {
 	if subnetService == nil {
-		var err error
-		if subnetService, err = InitializeSubnetService(service); err != nil {
-			log.Error(err, "failed to initialize subnet commonService")
-			os.Exit(1)
+		lock.Lock()
+		defer lock.Unlock()
+		if subnetService == nil {
+			var err error
+			if subnetService, err = InitializeSubnetService(service); err != nil {
+				log.Error(err, "failed to initialize subnet commonService")
+				os.Exit(1)
+			}
 		}
 	}
 	return subnetService
