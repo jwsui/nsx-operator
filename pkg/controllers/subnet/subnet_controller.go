@@ -52,10 +52,11 @@ func (r *SubnetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		log.Error(err, fmt.Sprintf("failed to get VPC under namespace: %s.\n", obj.Namespace))
 		return ResultRequeue, err
 	}
-	// Only one VPC under each namespace.
-	parameters := r.Service.GetSubnetParamFromPath(vpcList.Items[0].Status.NSXResourcePath)
+	//// Only one VPC under each namespace.
+	//parameters := r.Service.GetSubnetParamFromPath(vpcList.Items[0].Status.NSXResourcePath)
 
 	// A hack as there is no vpc controller for now.
+	parameters := subnet.SubnetParameters{}
 	parameters.OrgID = "default"
 	parameters.ProjectID = "dy_project_1"
 	parameters.VPCID = "vpc_test_1"
