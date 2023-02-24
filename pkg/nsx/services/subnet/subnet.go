@@ -2,6 +2,7 @@ package subnet
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"sync"
@@ -169,6 +170,7 @@ func (service *SubnetService) GetSubnetParamFromPath(nsxResourcePath string) *Su
 
 func (service *SubnetService) GetSubnetStatus(subnet *model.VpcSubnet) (*model.VpcSubnetStatus, error) {
 	param := service.GetSubnetParamFromPath(*subnet.Path)
+	log.Info(fmt.Sprintf("%s %s %s %s", param.OrgID, param.ProjectID, param.VPCID, *subnet.Id))
 	statusList, err := service.NSXClient.SubnetStatusClient.List(param.OrgID, param.ProjectID, param.VPCID, *subnet.Id)
 	if err != nil {
 		log.Error(err, "failed to get subnet status")
