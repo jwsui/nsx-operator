@@ -59,7 +59,7 @@ func (r *SubnetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	parameters := subnet.SubnetParameters{}
 	parameters.OrgID = "default"
 	parameters.ProjectID = "dy_project_1"
-	parameters.VPCID = "vpc_test_1"
+	parameters.VPCID = "jsui-vpc-3"
 
 	if obj.ObjectMeta.DeletionTimestamp.IsZero() {
 		metrics.CounterInc(r.Service.NSXConfig, metrics.ControllerUpdateTotal, MetricResTypeSubnet)
