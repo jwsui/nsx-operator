@@ -166,14 +166,9 @@ func (service *SubnetService) GetSubnetParamFromPath(nsxResourcePath string) *Su
 	}
 }
 
-func (service *SubnetService) GetSubnetStatus(subnet *v1alpha1.Subnet) (*model.VpcSubnetStatus, error) {
-	nsxSubnet, err := service.buildSubnet(subnet)
-	if err != nil {
-		log.Error(err, "failed to build Subnet")
-		return nil, err
-	}
-	param := service.GetSubnetParamFromPath(subnet.Status.NSXResourcePath)
-	statusList, err := service.NSXClient.SubnetStatusClient.List(param.OrgID, param.ProjectID, param.VPCID, *nsxSubnet.Id)
+func (service *SubnetService) GetSubnetStatus(subnet *model.VpcSubnet) (*model.VpcSubnetStatus, error) {
+	param := service.GetSubnetParamFromPath(*subnet.Path)
+	statusList, err := service.NSXClient.SubnetStatusClient.List(param.OrgID, param.ProjectID, param.VPCID, *subnet.Id)
 	if err != nil {
 		return nil, err
 	}
