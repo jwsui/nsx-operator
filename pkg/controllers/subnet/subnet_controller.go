@@ -28,9 +28,6 @@ var (
 	ResultRequeue           = common.ResultRequeue
 	ResultRequeueAfter5mins = common.ResultRequeueAfter5mins
 	MetricResTypeSubnet     = common.MetricResTypeSubnet
-	//TODO Hardcode value only for local test
-	projectID = "dy_project_1"
-	vpcID     = "vpc_test_1"
 )
 
 // SubnetReconciler reconciles a SubnetSet object

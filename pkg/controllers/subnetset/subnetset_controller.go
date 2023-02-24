@@ -11,10 +11,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 
 	v1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apimachineryruntime "k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -69,20 +67,20 @@ func (r *SubnetSetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			log.V(1).Info("added finalizer on subnetset CR", "subnetset", req.NamespacedName)
 		}
 
-		// TODO Only for local test, Create default Subnet for SubnetSet.
-		subnet := &v1alpha1.Subnet{}
-		subnetKey := types.NamespacedName{
-			Namespace: req.Namespace,
-			Name:      defaultSubnet,
-		}
-		if err := r.Client.Get(ctx, subnetKey, subnet); err != nil {
-			if !apierrors.IsNotFound(err) {
-				log.Error(err, "failed to get default subnet", "subnet", subnetKey)
-				updateFail(r, &ctx, obj, &err)
-				return ResultRequeue, err
-			}
-			r.createSubnet(obj, defaultSubnet)
-		}
+		//// TODO Only for local test, Create default Subnet for SubnetSet.
+		//subnet := &v1alpha1.Subnet{}
+		//subnetKey := types.NamespacedName{
+		//	Namespace: req.Namespace,
+		//	Name:      defaultSubnet,
+		//}
+		//if err := r.Client.Get(ctx, subnetKey, subnet); err != nil {
+		//	if !apierrors.IsNotFound(err) {
+		//		log.Error(err, "failed to get default subnet", "subnet", subnetKey)
+		//		updateFail(r, &ctx, obj, &err)
+		//		return ResultRequeue, err
+		//	}
+		//	r.createSubnet(obj, defaultSubnet)
+		//}
 
 		if err := r.updateSubnetSetStatus(obj); err != nil {
 			log.Error(err, "update subnetset status failed, would retry exponentially", "subnetset", req.NamespacedName)
