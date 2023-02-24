@@ -72,10 +72,10 @@ func (subnetStore *SubnetStore) GetByIndex(key string, value string) []model.Vpc
 }
 
 func (subnetStore *SubnetStore) GetByKey(key string) *model.VpcSubnet {
-	var subnet model.VpcSubnet
 	obj := subnetStore.ResourceStore.GetByKey(key)
-	if obj != nil {
-		subnet = obj.(model.VpcSubnet)
+	if obj == nil {
+		return nil
 	}
+	subnet := obj.(model.VpcSubnet)
 	return &subnet
 }

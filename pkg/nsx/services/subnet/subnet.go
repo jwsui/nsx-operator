@@ -1,7 +1,9 @@
 package subnet
 
 import (
+	"errors"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/model"
@@ -19,11 +21,20 @@ var (
 	EnforceRevisionCheckParam = false
 	ResourceTypeSubnet        = common.ResourceTypeSubnet
 	NewConverter              = common.NewConverter
+	// Default static ip-pool under Subnet.
+	ipPoolID = "static-ipv4-default"
 )
 
 type SubnetService struct {
 	common.Service
 	SubnetStore *SubnetStore
+}
+
+// SubnetParameters stores parameters to CRUD Subnet object
+type SubnetParameters struct {
+	OrgID     string
+	ProjectID string
+	VPCID     string
 }
 
 var subnetService *SubnetService
@@ -88,7 +99,6 @@ func (service *SubnetService) CreateOrUpdateSubnet(obj *v1alpha1.Subnet, orgID, 
 		log.Info("subnet not changed, skip updating", "subnet.Id", *nsxSubnet.Id)
 		return nil
 	}
-	// TODO Hardcode orgID=default
 	orgRoot, err := service.WrapHierarchySubnet(nsxSubnet, orgID, projectID, vpcID)
 	if err != nil {
 		log.Error(err, "WrapHierarchySubnet failed")
@@ -97,7 +107,6 @@ func (service *SubnetService) CreateOrUpdateSubnet(obj *v1alpha1.Subnet, orgID, 
 	if err = service.NSXClient.OrgRootClient.Patch(*orgRoot, &EnforceRevisionCheckParam); err != nil {
 		return err
 	}
-	// TODO Hardcode ordID=default
 	// Get Subnet from NSX after patch operation as NSX renders several fields like `path`/`parent_path`.
 	if *nsxSubnet, err = service.NSXClient.SubnetsClient.Get(orgID, projectID, vpcID, *nsxSubnet.Id); err != nil {
 		return err
@@ -130,7 +139,6 @@ func (service *SubnetService) DeleteSubnet(obj interface{}, orgID, projectID, vp
 	nsxSubnet.MarkedForDelete = &MarkedForDelete
 	// WrapHighLevelSubnet will modify the input subnet, make a copy for the following store update.
 	subnetCopy := *nsxSubnet
-	// TODO Hardcode orgID=default
 	orgRoot, err := service.WrapHierarchySubnet(nsxSubnet, orgID, projectID, vpcID)
 	if err != nil {
 		return err
@@ -145,20 +153,44 @@ func (service *SubnetService) DeleteSubnet(obj interface{}, orgID, projectID, vp
 	return nil
 }
 
-// GetAvailableIPNum TODO: need refactor
+func (service *SubnetService) GetSubnetParamFromPath(nsxResourcePath string) *SubnetParameters {
+	return &SubnetParameters{
+		OrgID:     strings.Split(nsxResourcePath, "/")[len(nsxResourcePath)-5],
+		ProjectID: strings.Split(nsxResourcePath, "/")[len(nsxResourcePath)-3],
+		VPCID:     strings.Split(nsxResourcePath, "/")[len(nsxResourcePath)-1],
+	}
+}
+
+func (service *SubnetService) GetSubnetStatus(subnet *v1alpha1.Subnet) (*model.VpcSubnetStatus, error) {
+	nsxSubnet, err := service.buildSubnet(subnet)
+	if err != nil {
+		log.Error(err, "failed to build Subnet")
+		return nil, err
+	}
+	param := service.GetSubnetParamFromPath(subnet.Status.NSXResourcePath)
+	statusList, err := service.NSXClient.SubnetStatusClient.List(param.OrgID, param.ProjectID, param.VPCID, *nsxSubnet.Id)
+	if err != nil {
+		return nil, err
+	}
+	if len(statusList.Results) == 0 {
+		err := errors.New("empty status result")
+		log.Error(err, "no subnet status found")
+		return nil, err
+	}
+	return &statusList.Results[0], nil
+}
+
 func (service *SubnetService) GetAvailableIPNum(subnet *v1alpha1.Subnet) (int64, error) {
-	if subnet.Spec.DHCPConfig.EnableDHCP {
-		if dhcpStats, err := service.NSXClient.DHCPStatsClient.Get("", "", "", "", nil, nil, nil, nil, nil, nil, nil); err != nil {
-			log.Error(err, "error")
-			return -1, err
-		} else {
-			return *dhcpStats.IpPoolStats[0].PoolSize - *dhcpStats.IpPoolStats[0].AllocatedNumber, nil
-		}
-	}
-	if ipPool, err := service.NSXClient.IPPoolClient.Get("", "", "", "", ""); err != nil {
-		log.Error(err, "error")
+	nsxSubnet, err := service.buildSubnet(subnet)
+	if err != nil {
+		log.Error(err, "failed to build Subnet")
 		return -1, err
-	} else {
-		return *ipPool.PoolUsage.AvailableIps, nil
 	}
+	param := service.GetSubnetParamFromPath(subnet.Status.NSXResourcePath)
+	ipPool, err := service.NSXClient.IPPoolClient.Get(param.OrgID, param.ProjectID, param.VPCID, *nsxSubnet.Id, ipPoolID)
+	if err != nil {
+		log.Error(err, "failed to get ip-pool")
+		return -1, err
+	}
+	return *ipPool.PoolUsage.AvailableIps, nil
 }

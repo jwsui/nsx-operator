@@ -15,7 +15,6 @@ import (
 	nsx_policy "github.com/vmware/vsphere-automation-sdk-go/services/nsxt"
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/infra/domains"
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/infra/domains/security_policies"
-	dhcp_client "github.com/vmware/vsphere-automation-sdk-go/services/nsxt/orgs/projects/infra/dhcp_server_configs"
 	vpc_search "github.com/vmware/vsphere-automation-sdk-go/services/nsxt/orgs/projects/search"
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/orgs/projects/vpcs/subnets"
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/search"
@@ -29,18 +28,18 @@ const (
 )
 
 type Client struct {
-	NsxConfig       *config.NSXOperatorConfig
-	RestConnector   *client.RestConnector
-	QueryClient     search.QueryClient
-	VPCQueryClient  vpc_search.QueryClient
-	GroupClient     domains.GroupsClient
-	SecurityClient  domains.SecurityPoliciesClient
-	RuleClient      security_policies.RulesClient
-	InfraClient     nsx_policy.InfraClient
-	IPPoolClient    subnets.IpPoolsClient
-	DHCPStatsClient dhcp_client.StatsClient
-	OrgRootClient   nsx_policy.OrgRootClient
-	SubnetsClient   vpcs.SubnetsClient
+	NsxConfig          *config.NSXOperatorConfig
+	RestConnector      *client.RestConnector
+	QueryClient        search.QueryClient
+	VPCQueryClient     vpc_search.QueryClient
+	GroupClient        domains.GroupsClient
+	SecurityClient     domains.SecurityPoliciesClient
+	RuleClient         security_policies.RulesClient
+	InfraClient        nsx_policy.InfraClient
+	IPPoolClient       subnets.IpPoolsClient
+	OrgRootClient      nsx_policy.OrgRootClient
+	SubnetsClient      vpcs.SubnetsClient
+	SubnetStatusClient subnets.StatusClient
 
 	NSXChecker    NSXHealthChecker
 	NSXVerChecker NSXVersionChecker
@@ -86,9 +85,9 @@ func GetClient(cf *config.NSXOperatorConfig) *Client {
 	infraClient := nsx_policy.NewInfraClient(restConnector(cluster))
 	vpcQueryClient := vpc_search.NewQueryClient(restConnector(cluster))
 	ipPoolClient := subnets.NewIpPoolsClient(restConnector(cluster))
-	dhcpStatsClient := dhcp_client.NewStatsClient(restConnector(cluster))
 	orgRootClient := nsx_policy.NewOrgRootClient(restConnector(cluster))
 	subnetsClient := vpcs.NewSubnetsClient(restConnector(cluster))
+	subnetStatusClient := subnets.NewStatusClient(restConnector(cluster))
 	nsxChecker := &NSXHealthChecker{
 		cluster: cluster,
 	}
@@ -98,20 +97,20 @@ func GetClient(cf *config.NSXOperatorConfig) *Client {
 	}
 
 	nsxClient := &Client{
-		NsxConfig:       cf,
-		RestConnector:   restConnector(cluster),
-		QueryClient:     queryClient,
-		GroupClient:     groupClient,
-		SecurityClient:  securityClient,
-		RuleClient:      ruleClient,
-		InfraClient:     infraClient,
-		NSXChecker:      *nsxChecker,
-		NSXVerChecker:   *nsxVersionChecker,
-		VPCQueryClient:  vpcQueryClient,
-		IPPoolClient:    ipPoolClient,
-		DHCPStatsClient: dhcpStatsClient,
-		OrgRootClient:   orgRootClient,
-		SubnetsClient:   subnetsClient,
+		NsxConfig:          cf,
+		RestConnector:      restConnector(cluster),
+		QueryClient:        queryClient,
+		GroupClient:        groupClient,
+		SecurityClient:     securityClient,
+		RuleClient:         ruleClient,
+		InfraClient:        infraClient,
+		NSXChecker:         *nsxChecker,
+		NSXVerChecker:      *nsxVersionChecker,
+		VPCQueryClient:     vpcQueryClient,
+		IPPoolClient:       ipPoolClient,
+		OrgRootClient:      orgRootClient,
+		SubnetsClient:      subnetsClient,
+		SubnetStatusClient: subnetStatusClient,
 	}
 	// NSX version check will be restarted during SecurityPolicy reconcile
 	// So, it's unnecessary to exit even if failed in the first time

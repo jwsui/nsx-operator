@@ -4,13 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	v1 "k8s.io/api/core/v1"
+	apimachineryruntime "k8s.io/apimachinery/pkg/runtime"
 	"os"
 	"reflect"
 	"runtime"
-	"strings"
-
-	v1 "k8s.io/api/core/v1"
-	apimachineryruntime "k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -42,13 +40,6 @@ type SubnetReconciler struct {
 	Service *subnet.SubnetService
 }
 
-// SubnetParameters stores parameters to CRUD Subnet object
-type SubnetParameters struct {
-	OrgID     string
-	ProjectID string
-	VPCID     string
-}
-
 func (r *SubnetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	obj := &v1alpha1.Subnet{}
 	log.Info("reconciling subnet CR", "subnet", req.NamespacedName)
@@ -59,10 +50,14 @@ func (r *SubnetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		return ResultNormal, client.IgnoreNotFound(err)
 	}
 
-	parameters, err := r.getSubnetParameters(obj)
-	if err != nil {
+	vpcList := &v1alpha1.VPCList{}
+	if err := r.Client.List(context.Background(), vpcList, client.InNamespace(obj.Namespace)); err != nil {
+		log.Error(err, fmt.Sprintf("failed to get VPC under namespace: %s.\n", obj.Namespace))
 		return ResultRequeue, err
 	}
+	// Only one VPC under each namespace.
+	parameters := r.Service.GetSubnetParamFromPath(vpcList.Items[0].Status.NSXResourcePath)
+
 	if obj.ObjectMeta.DeletionTimestamp.IsZero() {
 		metrics.CounterInc(r.Service.NSXConfig, metrics.ControllerUpdateTotal, MetricResTypeSubnet)
 		if !controllerutil.ContainsFinalizer(obj, servicecommon.FinalizerName) {
@@ -74,7 +69,6 @@ func (r *SubnetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 			}
 			log.V(1).Info("added finalizer on subnet CR", "subnet", req.NamespacedName)
 		}
-		//TODO add project and vpc id
 		if err := r.Service.CreateOrUpdateSubnet(obj, parameters.OrgID, parameters.ProjectID, parameters.VPCID); err != nil {
 			log.Error(err, "operate failed, would retry exponentially", "subnet", req.NamespacedName)
 			updateFail(r, &ctx, obj, &err)
@@ -89,7 +83,6 @@ func (r *SubnetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	} else {
 		if controllerutil.ContainsFinalizer(obj, servicecommon.FinalizerName) {
 			metrics.CounterInc(r.Service.NSXConfig, metrics.ControllerDeleteTotal, MetricResTypeSubnet)
-			//TODO add project and vpc id
 			if err := r.Service.DeleteSubnet(obj.UID, parameters.OrgID, parameters.ProjectID, parameters.VPCID); err != nil {
 				log.Error(err, "deletion failed, would retry exponentially", "subnet", req.NamespacedName)
 				deleteFail(r, &ctx, obj, &err)
@@ -110,30 +103,19 @@ func (r *SubnetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	return ctrl.Result{}, nil
 }
 
-func (r *SubnetReconciler) getSubnetParameters(obj *v1alpha1.Subnet) (*SubnetParameters, error) {
-	vpcList := &v1alpha1.VPCList{}
-	if err := r.Client.List(context.Background(), vpcList, client.InNamespace(obj.Namespace)); err != nil {
-		log.Error(err, fmt.Sprintf("failed to get VPC under namespace: %s.\n", obj.Namespace))
-		//TODO Handle error
-		return nil, err
-	}
-	// Only one VPC under each namespace.
-	nsxResourcePatch := vpcList.Items[0].Status.NSXResourcePath
-	return &SubnetParameters{
-		OrgID:     strings.Split(nsxResourcePatch, "/")[len(nsxResourcePatch)-5],
-		ProjectID: strings.Split(nsxResourcePatch, "/")[len(nsxResourcePatch)-3],
-		VPCID:     strings.Split(nsxResourcePatch, "/")[len(nsxResourcePatch)-1],
-	}, nil
-}
-
 func (r *SubnetReconciler) updateSubnetStatus(obj *v1alpha1.Subnet) error {
 	nsxSubnets := r.Service.SubnetStore.GetByIndex(servicecommon.TagScopeSubnetCRUID, string(obj.UID))
 	if len(nsxSubnets) == 0 {
 		return errors.New("failed to get subnet from store")
 	}
-	obj.Status.IPAddresses = make([]string, len(nsxSubnets[0].IpAddresses))
-	for i, ip := range nsxSubnets[0].IpAddresses {
-		obj.Status.IPAddresses[i] = ip
+	obj.Status.IPAddresses = obj.Status.IPAddresses[:0]
+	if len(obj.Spec.IPAddresses) > 0 {
+		// IPAddresses can be retrieved from nsxSubnet directly if subnet.spec.IPAddresses is specified.
+		obj.Status.IPAddresses = append(obj.Status.IPAddresses, nsxSubnets[0].IpAddresses...)
+
+	} else {
+		status, _ := r.Service.GetSubnetStatus(obj)
+		obj.Status.IPAddresses = append(obj.Status.IPAddresses, *status.NetworkAddress)
 	}
 	obj.Status.NSXResourcePath = *nsxSubnets[0].Path
 	return nil

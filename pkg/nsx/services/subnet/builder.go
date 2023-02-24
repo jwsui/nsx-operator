@@ -33,12 +33,14 @@ func (service *SubnetService) buildSubnet(obj *v1alpha1.Subnet) (*model.VpcSubne
 }
 
 func (service *SubnetService) buildDHCPConfig(obj *v1alpha1.DHCPConfig) *model.DhcpConfig {
+	// Subnet DHCP is used by AVI, not needed for now. We need to explicitly mark enableDhcp = false,
+	// otherwise Subnet will use DhcpConfig inherited from VPC.
 	dhcpConfig := &model.DhcpConfig{
-		DhcpRelayConfigPath: String(obj.DHCPRelayConfigPath),
-		DhcpV4PoolSize:      Int64(int64(obj.DHCPV4PoolSize)),
-		DhcpV6PoolSize:      Int64(int64(obj.DHCPV6PoolSize)),
-		DnsClientConfig:     service.buildDNSClientConfig(&obj.DNSClientConfig),
-		EnableDhcp:          Bool(obj.EnableDHCP),
+		//DhcpRelayConfigPath: String(obj.DHCPRelayConfigPath),
+		//DhcpV4PoolSize:      Int64(int64(obj.DHCPV4PoolSize)),
+		//DhcpV6PoolSize:      Int64(int64(obj.DHCPV6PoolSize)),
+		//DnsClientConfig:     service.buildDNSClientConfig(&obj.DNSClientConfig),
+		EnableDhcp: Bool(false),
 	}
 	return dhcpConfig
 }
@@ -50,9 +52,10 @@ func (service *SubnetService) buildDNSClientConfig(obj *v1alpha1.DNSClientConfig
 }
 
 func (service *SubnetService) buildAdvancedConfig(obj *v1alpha1.AdvancedConfig) *model.SubnetAdvancedConfig {
+	// Subnet uses static IP allocation, mark StaticIpAllocation = true.
 	advancedConfig := &model.SubnetAdvancedConfig{
 		StaticIpAllocation: &model.StaticIpAllocation{
-			Enable: Bool(obj.StaticIPAllocation.Enable),
+			Enable: Bool(true),
 		},
 	}
 	return advancedConfig

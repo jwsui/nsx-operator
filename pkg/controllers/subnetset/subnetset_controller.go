@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"os"
 	"reflect"
 	"runtime"
@@ -167,7 +168,8 @@ func (r *SubnetSetReconciler) getAvailableSubnet(subnetSet *v1alpha1.SubnetSet) 
 	if allocatedSubnet == nil {
 		log.Info("no available subnet found, creating new subnet")
 		// TODO generate subnet name here
-		subnet, err := r.createSubnet(subnetSet, "subnetName")
+		subnetName := fmt.Sprintf("subnet-%s", uuid.New().String()[:16])
+		subnet, err := r.createSubnet(subnetSet, subnetName)
 		if err != nil {
 			log.Error(err, "failed to create Subnet")
 			return nil, err
