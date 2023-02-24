@@ -17,7 +17,7 @@ import (
 // - VPC creation: create default SubnetSet for the VPC.
 // - VPC deletion: delete all SubnetSets under the VPC.
 
-var defaultSubnetSets = []string{"DefaultVMSubnetSet", "DefaultPodSubnetSet"}
+var defaultSubnetSets = []string{"default-vm-subnetset", "default-pod-subnetset"}
 
 type VPCHandler struct {
 	Client client.Client
