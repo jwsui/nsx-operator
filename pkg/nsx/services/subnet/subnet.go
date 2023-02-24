@@ -94,7 +94,12 @@ func (service *SubnetService) CreateOrUpdateSubnet(obj *v1alpha1.Subnet, orgID, 
 		return err
 	}
 	existingSubnet := service.SubnetStore.GetByKey(*nsxSubnet.Id)
-	changed := common.CompareResource(SubnetToComparable(existingSubnet), SubnetToComparable(nsxSubnet))
+	changed := false
+	if existingSubnet == nil {
+		changed = true
+	} else {
+		changed = common.CompareResource(SubnetToComparable(existingSubnet), SubnetToComparable(nsxSubnet))
+	}
 	if !changed {
 		log.Info("subnet not changed, skip updating", "subnet.Id", *nsxSubnet.Id)
 		return nil
