@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	v1 "k8s.io/api/core/v1"
-	apimachineryruntime "k8s.io/apimachinery/pkg/runtime"
 	"os"
 	"reflect"
 	"runtime"
+
+	v1 "k8s.io/api/core/v1"
+	apimachineryruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -28,9 +30,6 @@ var (
 	ResultRequeue           = common.ResultRequeue
 	ResultRequeueAfter5mins = common.ResultRequeueAfter5mins
 	MetricResTypeSubnet     = common.MetricResTypeSubnet
-	//TODO Hardcode value only for local test
-	projectID = "dy_project_1"
-	vpcID     = "vpc_test_1"
 )
 
 // SubnetReconciler reconciles a SubnetSet object
@@ -114,10 +113,42 @@ func (r *SubnetReconciler) updateSubnetStatus(obj *v1alpha1.Subnet) error {
 		obj.Status.IPAddresses = append(obj.Status.IPAddresses, nsxSubnets[0].IpAddresses...)
 
 	} else {
-		status, _ := r.Service.GetSubnetStatus(obj)
+		status, err := r.Service.GetSubnetStatus(&nsxSubnets[0])
+		if err != nil {
+			return err
+		}
 		obj.Status.IPAddresses = append(obj.Status.IPAddresses, *status.NetworkAddress)
 	}
 	obj.Status.NSXResourcePath = *nsxSubnets[0].Path
+	if len(obj.OwnerReferences) > 0 {
+		// Updates SubnetSet status if Subnet belongs to one SubnetSet.
+		subnetset := &v1alpha1.SubnetSet{}
+		key := types.NamespacedName{
+			Namespace: obj.Namespace,
+			Name:      obj.OwnerReferences[0].Name,
+		}
+		if err := r.Client.Get(context.Background(), key, subnetset); err != nil {
+			return err
+		}
+		newSubnetInfo := v1alpha1.SubnetInfo{
+			NSXResourcePath: obj.Status.NSXResourcePath,
+			IPAddresses:     obj.Status.IPAddresses,
+		}
+		exist := false
+		for i, existingSubnetInfo := range subnetset.Status.Subnets {
+			if existingSubnetInfo.NSXResourcePath == obj.Status.NSXResourcePath {
+				subnetset.Status.Subnets[i] = newSubnetInfo
+				exist = true
+				break
+			}
+		}
+		if !exist {
+			subnetset.Status.Subnets = append(subnetset.Status.Subnets, newSubnetInfo)
+		}
+		if err := r.Client.Status().Update(context.Background(), subnetset); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

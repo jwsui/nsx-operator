@@ -94,7 +94,12 @@ func (service *SubnetService) CreateOrUpdateSubnet(obj *v1alpha1.Subnet, orgID, 
 		return err
 	}
 	existingSubnet := service.SubnetStore.GetByKey(*nsxSubnet.Id)
-	changed := common.CompareResource(SubnetToComparable(existingSubnet), SubnetToComparable(nsxSubnet))
+	changed := false
+	if existingSubnet == nil {
+		changed = true
+	} else {
+		changed = common.CompareResource(SubnetToComparable(existingSubnet), SubnetToComparable(nsxSubnet))
+	}
 	if !changed {
 		log.Info("subnet not changed, skip updating", "subnet.Id", *nsxSubnet.Id)
 		return nil
@@ -154,22 +159,19 @@ func (service *SubnetService) DeleteSubnet(obj interface{}, orgID, projectID, vp
 }
 
 func (service *SubnetService) GetSubnetParamFromPath(nsxResourcePath string) *SubnetParameters {
+	pathArray := strings.Split(nsxResourcePath, "/")
 	return &SubnetParameters{
-		OrgID:     strings.Split(nsxResourcePath, "/")[len(nsxResourcePath)-5],
-		ProjectID: strings.Split(nsxResourcePath, "/")[len(nsxResourcePath)-3],
-		VPCID:     strings.Split(nsxResourcePath, "/")[len(nsxResourcePath)-1],
+		OrgID:     pathArray[2],
+		ProjectID: pathArray[4],
+		VPCID:     pathArray[6],
 	}
 }
 
-func (service *SubnetService) GetSubnetStatus(subnet *v1alpha1.Subnet) (*model.VpcSubnetStatus, error) {
-	nsxSubnet, err := service.buildSubnet(subnet)
+func (service *SubnetService) GetSubnetStatus(subnet *model.VpcSubnet) (*model.VpcSubnetStatus, error) {
+	param := service.GetSubnetParamFromPath(*subnet.Path)
+	statusList, err := service.NSXClient.SubnetStatusClient.List(param.OrgID, param.ProjectID, param.VPCID, *subnet.Id)
 	if err != nil {
-		log.Error(err, "failed to build Subnet")
-		return nil, err
-	}
-	param := service.GetSubnetParamFromPath(subnet.Status.NSXResourcePath)
-	statusList, err := service.NSXClient.SubnetStatusClient.List(param.OrgID, param.ProjectID, param.VPCID, *nsxSubnet.Id)
-	if err != nil {
+		log.Error(err, "failed to get subnet status")
 		return nil, err
 	}
 	if len(statusList.Results) == 0 {
