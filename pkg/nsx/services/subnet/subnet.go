@@ -162,9 +162,9 @@ func (service *SubnetService) DeleteSubnet(obj interface{}, orgID, projectID, vp
 func (service *SubnetService) GetSubnetParamFromPath(nsxResourcePath string) *SubnetParameters {
 	pathArray := strings.Split(nsxResourcePath, "/")
 	return &SubnetParameters{
-		OrgID:     pathArray[1],
-		ProjectID: pathArray[3],
-		VPCID:     pathArray[5],
+		OrgID:     pathArray[2],
+		ProjectID: pathArray[4],
+		VPCID:     pathArray[6],
 	}
 }
 
