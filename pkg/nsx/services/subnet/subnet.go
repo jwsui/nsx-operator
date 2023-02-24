@@ -171,6 +171,7 @@ func (service *SubnetService) GetSubnetStatus(subnet *model.VpcSubnet) (*model.V
 	param := service.GetSubnetParamFromPath(*subnet.Path)
 	statusList, err := service.NSXClient.SubnetStatusClient.List(param.OrgID, param.ProjectID, param.VPCID, *subnet.Id)
 	if err != nil {
+		log.Error(err, "failed to get subnet status")
 		return nil, err
 	}
 	if len(statusList.Results) == 0 {

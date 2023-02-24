@@ -117,7 +117,10 @@ func (r *SubnetReconciler) updateSubnetStatus(obj *v1alpha1.Subnet) error {
 		obj.Status.IPAddresses = append(obj.Status.IPAddresses, nsxSubnets[0].IpAddresses...)
 
 	} else {
-		status, _ := r.Service.GetSubnetStatus(&nsxSubnets[0])
+		status, err := r.Service.GetSubnetStatus(&nsxSubnets[0])
+		if err != nil {
+			return err
+		}
 		obj.Status.IPAddresses = append(obj.Status.IPAddresses, *status.NetworkAddress)
 	}
 	obj.Status.NSXResourcePath = *nsxSubnets[0].Path
