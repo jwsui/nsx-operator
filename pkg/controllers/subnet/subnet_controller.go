@@ -55,6 +55,11 @@ func (r *SubnetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	// Only one VPC under each namespace.
 	parameters := r.Service.GetSubnetParamFromPath(vpcList.Items[0].Status.NSXResourcePath)
 
+	// A hack as there is no vpc controller for now.
+	parameters.OrgID = "default"
+	parameters.ProjectID = "dy_project_1"
+	parameters.VPCID = "vpc_test_1"
+
 	if obj.ObjectMeta.DeletionTimestamp.IsZero() {
 		metrics.CounterInc(r.Service.NSXConfig, metrics.ControllerUpdateTotal, MetricResTypeSubnet)
 		if !controllerutil.ContainsFinalizer(obj, servicecommon.FinalizerName) {
