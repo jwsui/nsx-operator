@@ -250,9 +250,8 @@ func (r *SubnetSetReconciler) updateSubnetSetStatus(obj *v1alpha1.SubnetSet) err
 		}
 		subnetInfo := &v1alpha1.SubnetInfo{}
 		subnetInfo.NSXResourcePath = *nsxSubnets[0].Path
-		subnetInfo.IPAddresses = make([]string, len(nsxSubnets[0].IpAddresses))
-		for i, ip := range nsxSubnets[0].IpAddresses {
-			subnetInfo.IPAddresses[i] = ip
+		for _, ip := range subnet.Status.IPAddresses {
+			subnetInfo.IPAddresses = append(subnetInfo.IPAddresses, ip)
 		}
 		subnetsInfo[index] = *subnetInfo
 	}
