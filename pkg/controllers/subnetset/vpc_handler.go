@@ -2,6 +2,8 @@ package subnetset
 
 import (
 	"context"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,7 +33,16 @@ func (h *VPCHandler) Create(e event.CreateEvent, _ workqueue.RateLimitingInterfa
 		if err := retry.OnError(retry.DefaultRetry, func(err error) bool {
 			return err != nil
 		}, func() error {
-			obj := &v1alpha1.SubnetSet{
+			key := types.NamespacedName{Namespace: ns, Name: name}
+			obj := &v1alpha1.SubnetSet{}
+			if err := h.Client.Get(context.Background(), key, obj); err == nil {
+				// avoid creating when nsx-operator restarted if Subnetset exists.
+				log.Info("Subnetset already exists", "Namespace", ns, "Name", name)
+				return nil
+			} else if !errors.IsNotFound(err) {
+				return err
+			}
+			obj = &v1alpha1.SubnetSet{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: ns,
 					Name:      subnetSet,
