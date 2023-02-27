@@ -127,6 +127,7 @@ func (r *SubnetReconciler) updateSubnetStatus(obj *v1alpha1.Subnet) error {
 	}
 	obj.Status.NSXResourcePath = *nsxSubnets[0].Path
 	if len(obj.OwnerReferences) > 0 {
+		// Updates SubnetSet status if Subnet belongs to one SubnetSet.
 		subnetset := &v1alpha1.SubnetSet{}
 		key := types.NamespacedName{
 			Namespace: obj.Namespace,
@@ -135,13 +136,24 @@ func (r *SubnetReconciler) updateSubnetStatus(obj *v1alpha1.Subnet) error {
 		if err := r.Client.Get(context.Background(), key, subnetset); err != nil {
 			return err
 		}
-		subnetset.Status.Subnets = []v1alpha1.SubnetInfo{
-			{
-				NSXResourcePath: "",
-				IPAddresses:     nil,
-			},
+		newSubnetInfo := v1alpha1.SubnetInfo{
+			NSXResourcePath: obj.Status.NSXResourcePath,
+			IPAddresses:     obj.Status.IPAddresses,
 		}
-		r.Client.Status().Update(context.Background(), subnetset)
+		exist := false
+		for i, existingSubnetInfo := range subnetset.Status.Subnets {
+			if existingSubnetInfo.NSXResourcePath == obj.Status.NSXResourcePath {
+				subnetset.Status.Subnets[i] = newSubnetInfo
+				exist = true
+				break
+			}
+		}
+		if !exist {
+			subnetset.Status.Subnets = append(subnetset.Status.Subnets, newSubnetInfo)
+		}
+		if err := r.Client.Status().Update(context.Background(), subnetset); err != nil {
+			return err
+		}
 	}
 	return nil
 }
