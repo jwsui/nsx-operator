@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	v1 "k8s.io/api/core/v1"
-	apimachineryruntime "k8s.io/apimachinery/pkg/runtime"
 	"os"
 	"reflect"
 	"runtime"
+
+	v1 "k8s.io/api/core/v1"
+	apimachineryruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -124,6 +126,23 @@ func (r *SubnetReconciler) updateSubnetStatus(obj *v1alpha1.Subnet) error {
 		obj.Status.IPAddresses = append(obj.Status.IPAddresses, *status.NetworkAddress)
 	}
 	obj.Status.NSXResourcePath = *nsxSubnets[0].Path
+	if len(obj.OwnerReferences) > 0 {
+		subnetset := &v1alpha1.SubnetSet{}
+		key := types.NamespacedName{
+			Namespace: obj.Namespace,
+			Name:      obj.OwnerReferences[0].Name,
+		}
+		if err := r.Client.Get(context.Background(), key, subnetset); err != nil {
+			return err
+		}
+		subnetset.Status.Subnets = []v1alpha1.SubnetInfo{
+			{
+				NSXResourcePath: "",
+				IPAddresses:     nil,
+			},
+		}
+		r.Client.Status().Update(context.Background(), subnetset)
+	}
 	return nil
 }
 
