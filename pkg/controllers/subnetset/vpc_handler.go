@@ -34,7 +34,7 @@ func (h *VPCHandler) Create(e event.CreateEvent, _ workqueue.RateLimitingInterfa
 		if err := retry.OnError(retry.DefaultRetry, func(err error) bool {
 			return err != nil
 		}, func() error {
-			key := types.NamespacedName{Namespace: ns, Name: name}
+			key := types.NamespacedName{Namespace: ns, Name: subnetSet}
 			obj := &v1alpha1.SubnetSet{}
 			if err := h.Client.Get(context.Background(), key, obj); err == nil {
 				// avoid creating when nsx-operator restarted if Subnetset exists.
