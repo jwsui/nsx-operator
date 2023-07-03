@@ -1,0 +1,5 @@
+apiVersion: nsx.vmware.com/v1alpha1
+kind: VPC
+metadata:
+  name: vpc-sample
+  namespace: test
