@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/model"
 	"k8s.io/apimachinery/pkg/types"
@@ -141,6 +142,21 @@ func (service *SubnetService) DeleteSubnet(obj interface{}, orgID, projectID, vp
 		}
 		nsxSubnet = &subnets[0]
 	}
+	if err := service.DeleteIPAllocation(orgID, projectID, vpcID, *nsxSubnet.Id); err != nil {
+		return err
+	}
+	for {
+		log.Info("waiting for IP allocations to be released", "subnet", nsxSubnet.Id)
+		usage, err := service.getIPPoolUsage(nsxSubnet)
+		if err != nil {
+			return err
+		}
+		if *usage.AllocatedIpAllocations > 0 {
+			time.Sleep(5 * time.Second)
+			continue
+		}
+		break
+	}
 	nsxSubnet.MarkedForDelete = &MarkedForDelete
 	// WrapHighLevelSubnet will modify the input subnet, make a copy for the following store update.
 	subnetCopy := *nsxSubnet
@@ -154,7 +170,24 @@ func (service *SubnetService) DeleteSubnet(obj interface{}, orgID, projectID, vp
 	if err = service.SubnetStore.Operate(&subnetCopy); err != nil {
 		return err
 	}
-	log.Info("successfully deleted  nsxSubnet", "nsxSubnet", nsxSubnet)
+	log.Info("successfully deleted nsxSubnet", "nsxSubnet", nsxSubnet)
+	return nil
+}
+
+func (service *SubnetService) DeleteIPAllocation(orgID, projectID, vpcID, subnetID string) error {
+	ipAllocations, err := service.NSXClient.IPAllocationClient.List(orgID, projectID, vpcID, subnetID, ipPoolID,
+		nil, nil, nil, nil, nil, nil)
+	if err != nil {
+		log.Error(err, "failed to get ip-allocations", "Subnet", subnetID)
+		return err
+	}
+	for _, alloc := range ipAllocations.Results {
+		if err = service.NSXClient.IPAllocationClient.Delete(orgID, projectID, vpcID, subnetID, ipPoolID, *alloc.Id); err != nil {
+			log.Error(err, "failed to delete ip-allocation", "Subnet", subnetID, "ip-alloc", *alloc.Id)
+			return err
+		}
+	}
+	log.Info("all IP allocations have been deleted", "Subnet", subnetID)
 	return nil
 }
 
@@ -182,17 +215,21 @@ func (service *SubnetService) GetSubnetStatus(subnet *model.VpcSubnet) (*model.V
 	return &statusList.Results[0], nil
 }
 
-func (service *SubnetService) GetAvailableIPNum(subnet *v1alpha1.Subnet) (int64, error) {
-	nsxSubnet, err := service.buildSubnet(subnet)
-	if err != nil {
-		log.Error(err, "failed to build Subnet")
-		return -1, err
-	}
-	param := service.GetSubnetParamFromPath(subnet.Status.NSXResourcePath)
+func (service *SubnetService) getIPPoolUsage(nsxSubnet *model.VpcSubnet) (*model.PolicyPoolUsage, error) {
+	param := service.GetSubnetParamFromPath(*nsxSubnet.Path)
 	ipPool, err := service.NSXClient.IPPoolClient.Get(param.OrgID, param.ProjectID, param.VPCID, *nsxSubnet.Id, ipPoolID)
 	if err != nil {
-		log.Error(err, "failed to get ip-pool")
-		return -1, err
+		log.Error(err, "failed to get ip-pool", "Subnet", *nsxSubnet.Id)
+		return nil, err
 	}
-	return *ipPool.PoolUsage.AvailableIps, nil
+	return ipPool.PoolUsage, nil
+}
+
+func (service *SubnetService) GetIPPoolUsage(subnet *v1alpha1.Subnet) (*model.PolicyPoolUsage, error) {
+	nsxSubnet, err := service.buildSubnet(subnet)
+	if err != nil {
+		log.Error(err, "failed to build Subnet", "Subnet", *nsxSubnet.Id)
+		return nil, err
+	}
+	return service.getIPPoolUsage(nsxSubnet)
 }

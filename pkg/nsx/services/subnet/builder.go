@@ -27,6 +27,7 @@ func (service *SubnetService) buildSubnet(obj *v1alpha1.Subnet) (*model.VpcSubne
 		DhcpConfig:     service.buildDHCPConfig(&obj.Spec.DHCPConfig),
 		Tags:           service.buildBasicTags(obj),
 		AdvancedConfig: service.buildAdvancedConfig(&obj.Spec.AdvancedConfig),
+		Path:           String(obj.Status.NSXResourcePath),
 	}
 	nsxSubnet.IpAddresses = append(nsxSubnet.IpAddresses, obj.Spec.IPAddresses...)
 	return nsxSubnet, nil

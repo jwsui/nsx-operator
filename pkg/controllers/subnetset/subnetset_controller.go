@@ -143,7 +143,12 @@ func (r *SubnetSetReconciler) getAvailableSubnet(subnetSet *v1alpha1.SubnetSet) 
 	}
 	var allocatedSubnet *v1alpha1.Subnet
 	for _, subnet := range subnetList.Items {
-		if nums, _ := r.Service.GetAvailableIPNum(&subnet); nums > 0 {
+		usage, err := r.Service.GetIPPoolUsage(&subnet)
+		if err != nil {
+			log.Info("failed to get IP usage, continue", "Subnet", subnet.Name)
+			continue
+		}
+		if *usage.AvailableIps > 0 {
 			allocatedSubnet = &subnet
 			break
 		}

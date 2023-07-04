@@ -17,6 +17,7 @@ import (
 	vpc_search "github.com/vmware/vsphere-automation-sdk-go/services/nsxt/orgs/projects/search"
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/orgs/projects/vpcs"
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/orgs/projects/vpcs/subnets"
+	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/orgs/projects/vpcs/subnets/ip_pools"
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/search"
 
 	"github.com/vmware-tanzu/nsx-operator/pkg/config"
@@ -37,6 +38,7 @@ type Client struct {
 	RuleClient         security_policies.RulesClient
 	InfraClient        nsx_policy.InfraClient
 	IPPoolClient       subnets.IpPoolsClient
+	IPAllocationClient ip_pools.IpAllocationsClient
 	OrgRootClient      nsx_policy.OrgRootClient
 	SubnetsClient      vpcs.SubnetsClient
 	SubnetStatusClient subnets.StatusClient
@@ -85,6 +87,7 @@ func GetClient(cf *config.NSXOperatorConfig) *Client {
 	infraClient := nsx_policy.NewInfraClient(restConnector(cluster))
 	vpcQueryClient := vpc_search.NewQueryClient(restConnector(cluster))
 	ipPoolClient := subnets.NewIpPoolsClient(restConnector(cluster))
+	ipAllocationClient := ip_pools.NewIpAllocationsClient(restConnector(cluster))
 	orgRootClient := nsx_policy.NewOrgRootClient(restConnector(cluster))
 	subnetsClient := vpcs.NewSubnetsClient(restConnector(cluster))
 	subnetStatusClient := subnets.NewStatusClient(restConnector(cluster))
@@ -108,6 +111,7 @@ func GetClient(cf *config.NSXOperatorConfig) *Client {
 		NSXVerChecker:      *nsxVersionChecker,
 		VPCQueryClient:     vpcQueryClient,
 		IPPoolClient:       ipPoolClient,
+		IPAllocationClient: ipAllocationClient,
 		OrgRootClient:      orgRootClient,
 		SubnetsClient:      subnetsClient,
 		SubnetStatusClient: subnetStatusClient,
