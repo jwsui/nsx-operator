@@ -148,7 +148,8 @@ func (r *SubnetSetReconciler) getAvailableSubnet(subnetSet *v1alpha1.SubnetSet) 
 			log.Info("failed to get IP usage, continue", "Subnet", subnet.Name)
 			continue
 		}
-		if *usage.AvailableIps > 0 {
+		// ONLY FOR DEMO !!!
+		if *usage.AllocatedIpAllocations == 0 {
 			allocatedSubnet = &subnet
 			break
 		}

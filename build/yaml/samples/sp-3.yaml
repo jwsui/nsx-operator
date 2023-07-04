@@ -1,7 +1,7 @@
 apiVersion: nsx.vmware.com/v1alpha1
 kind: SubnetPort
 metadata:
-  name: subnetport-sample-1
+  name: subnetport-sample-3
   namespace: test
 spec:
   subnetSet: default-pod-subnetset
