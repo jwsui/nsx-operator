@@ -1,6 +1,7 @@
 package subnet
 
 import (
+	"context"
 	"errors"
 	"os"
 	"strings"
@@ -111,6 +112,9 @@ func (service *SubnetService) CreateOrUpdateSubnet(obj *v1alpha1.Subnet, orgID, 
 		return err
 	}
 	if err = service.NSXClient.OrgRootClient.Patch(*orgRoot, &EnforceRevisionCheckParam); err != nil {
+		return err
+	}
+	if err = service.CheckRealizedState(nsxSubnet, common.RealizeTimeout); err != nil {
 		return err
 	}
 	// Get Subnet from NSX after patch operation as NSX renders several fields like `path`/`parent_path`.
@@ -232,4 +236,45 @@ func (service *SubnetService) GetIPPoolUsage(subnet *v1alpha1.Subnet) (*model.Po
 		return nil, err
 	}
 	return service.getIPPoolUsage(nsxSubnet)
+}
+
+func (service *SubnetService) subnetRealized(nsxSubnet *model.VpcSubnet) bool {
+	param := service.GetSubnetParamFromPath(*nsxSubnet.Path)
+	results, err := service.NSXClient.RealizedStateClient.List(param.OrgID, param.ProjectID, *nsxSubnet.Path, nil)
+	if err != nil {
+		log.Error(err, "failed to check subnet realized status", "Subnet", *nsxSubnet.Id)
+		return false
+	}
+	for _, result := range results.Results {
+		if *result.EntityType != "RealizedLogicalSwitch" {
+			continue
+		}
+		if *result.State == "REALIZED" {
+			return true
+		}
+	}
+	return false
+}
+
+func (service *SubnetService) CheckRealizedState(nsxSubnet *model.VpcSubnet, timeout time.Duration) error {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	ch := make(chan bool)
+	go func(ctx context.Context, ch chan bool) {
+		for {
+			if service.subnetRealized(nsxSubnet) {
+				ch <- true
+				return
+			}
+			time.Sleep(time.Second)
+		}
+	}(ctx, ch)
+	select {
+	case <-ctx.Done():
+		err := errors.New("realize timeout")
+		log.Error(err, "timeout waiting for subnet realized", "subnet", *nsxSubnet.Id)
+		return err
+	case <-ch:
+		return nil
+	}
 }

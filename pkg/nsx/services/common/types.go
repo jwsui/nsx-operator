@@ -34,8 +34,9 @@ const (
 	TagScopeSubnetCRName         string = "nsx-op/subnet_cr_name"
 	TagScopeSubnetCRUID          string = "nsx-op/subnet_cr_uid"
 
-	GCInterval    = 60 * time.Second
-	FinalizerName = "securitypolicy.nsx.vmware.com/finalizer"
+	GCInterval     = 60 * time.Second
+	RealizeTimeout = 2 * time.Minute
+	FinalizerName  = "securitypolicy.nsx.vmware.com/finalizer"
 )
 
 var (
