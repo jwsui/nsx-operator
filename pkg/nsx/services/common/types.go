@@ -31,8 +31,9 @@ const (
 	TagScopeNCPVNETInterface     string = "ncp/vnet_interface"
 	TagScopeVPCCRName            string = "nsx-op/vpc_cr_name"
 	TagScopeVPCCRUID             string = "nsx-op/vpc_cr_uid"
-	TagScopeSubnetCRName         string = "nsx-op/subnet_cr_name"
-	TagScopeSubnetCRUID          string = "nsx-op/subnet_cr_uid"
+	// TagScopeSubnetCRType indicates that NSX Subnet is linked to Subnet CR or SubnetSet CR.
+	TagScopeSubnetCRType string = "nsx-op/subnet_cr_type"
+	TagScopeSubnetCRUID  string = "nsx-op/subnet_cr_uid"
 
 	GCInterval     = 60 * time.Second
 	RealizeTimeout = 2 * time.Minute

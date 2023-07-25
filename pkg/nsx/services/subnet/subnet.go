@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/model"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/vmware-tanzu/nsx-operator/pkg/apis/v1alpha1"
@@ -24,7 +24,8 @@ var (
 	ResourceTypeSubnet        = common.ResourceTypeSubnet
 	NewConverter              = common.NewConverter
 	// Default static ip-pool under Subnet.
-	ipPoolID = "static-ipv4-default"
+	ipPoolID        = "static-ipv4-default"
+	SubnetTypeError = errors.New("unsupported type")
 )
 
 type SubnetService struct {
@@ -67,7 +68,9 @@ func InitializeSubnetService(service common.Service) (*SubnetService, error) {
 		Service: service,
 		SubnetStore: &SubnetStore{
 			ResourceStore: common.ResourceStore{
-				Indexer:     cache.NewIndexer(keyFunc, cache.Indexers{common.TagScopeSubnetCRUID: indexFunc}),
+				Indexer: cache.NewIndexer(keyFunc, cache.Indexers{
+					common.TagScopeSubnetCRUID: subnetIndexFunc,
+				}),
 				BindingType: model.VpcSubnetBindingType(),
 			},
 		},
@@ -89,22 +92,27 @@ func InitializeSubnetService(service common.Service) (*SubnetService, error) {
 	return subnetService, nil
 }
 
-func (service *SubnetService) CreateOrUpdateSubnet(obj *v1alpha1.Subnet, orgID, projectID, vpcID string) error {
-	nsxSubnet, err := service.buildSubnet(obj)
+// TODO Test update of VpcSubnet(eg. update tags)
+func (service *SubnetService) CreateOrUpdateSubnet(obj client.Object, orgID, projectID, vpcID string, tags []model.Tag) error {
+	uid := string(obj.GetUID())
+	nsxSubnet, err := service.buildSubnet(obj, tags)
 	if err != nil {
 		log.Error(err, "failed to build Subnet")
 		return err
 	}
-	existingSubnet := service.SubnetStore.GetByKey(*nsxSubnet.Id)
-	changed := false
-	if existingSubnet == nil {
-		changed = true
-	} else {
-		changed = common.CompareResource(SubnetToComparable(existingSubnet), SubnetToComparable(nsxSubnet))
-	}
-	if !changed {
-		log.Info("subnet not changed, skip updating", "subnet.Id", *nsxSubnet.Id)
-		return nil
+	switch obj.(type) {
+	case *v1alpha1.Subnet:
+		nsxSubnets := service.SubnetStore.GetByIndex(common.TagScopeSubnetCRUID, uid)
+		changed := false
+		if len(nsxSubnets) == 0 {
+			changed = true
+		} else {
+			changed = common.CompareResource(SubnetToComparable(&nsxSubnets[0]), SubnetToComparable(nsxSubnet))
+		}
+		if !changed {
+			log.Info("subnet not changed, skip updating", "subnet.Id", *nsxSubnets[0].Id)
+			return nil
+		}
 	}
 	orgRoot, err := service.WrapHierarchySubnet(nsxSubnet, orgID, projectID, vpcID)
 	if err != nil {
@@ -128,53 +136,40 @@ func (service *SubnetService) CreateOrUpdateSubnet(obj *v1alpha1.Subnet, orgID, 
 	return nil
 }
 
-func (service *SubnetService) DeleteSubnet(obj interface{}, orgID, projectID, vpcID string) error {
-	var nsxSubnet *model.VpcSubnet
-	switch subnet := obj.(type) {
-	case *v1alpha1.Subnet:
-		var err error
-		nsxSubnet, err = service.buildSubnet(subnet)
-		if err != nil {
-			log.Error(err, "failed to build Subnet")
+func (service *SubnetService) DeleteSubnet(obj client.Object, orgID, projectID, vpcID string) error {
+	nsxSubnets := service.SubnetStore.GetByIndex(common.TagScopeSubnetCRUID, string(obj.GetUID()))
+	for _, nsxSubnet := range nsxSubnets {
+		if err := service.DeleteIPAllocation(orgID, projectID, vpcID, *nsxSubnet.Id); err != nil {
 			return err
 		}
-	case types.UID:
-		subnets := service.SubnetStore.GetByIndex(common.TagScopeSubnetCRUID, string(subnet))
-		if len(subnets) == 0 {
-			log.Info("subnet is not found in store, skip deleting it", "uid", string(subnet))
-			return nil
+		for {
+			log.Info("waiting for IP allocations to be released", "subnet", nsxSubnet.Id)
+			usage, err := service.getIPPoolUsage(&nsxSubnet)
+			if err != nil {
+				continue
+			}
+			if *usage.AllocatedIpAllocations > 0 {
+				time.Sleep(5 * time.Second)
+				continue
+			}
+			break
 		}
-		nsxSubnet = &subnets[0]
-	}
-	if err := service.DeleteIPAllocation(orgID, projectID, vpcID, *nsxSubnet.Id); err != nil {
-		return err
-	}
-	for {
-		log.Info("waiting for IP allocations to be released", "subnet", nsxSubnet.Id)
-		usage, err := service.getIPPoolUsage(nsxSubnet)
+		nsxSubnet.MarkedForDelete = &MarkedForDelete
+		// WrapHighLevelSubnet will modify the input subnet, make a copy for the following store update.
+		subnetCopy := nsxSubnet
+		orgRoot, err := service.WrapHierarchySubnet(&nsxSubnet, orgID, projectID, vpcID)
 		if err != nil {
 			return err
 		}
-		if *usage.AllocatedIpAllocations > 0 {
-			time.Sleep(5 * time.Second)
-			continue
+		if err = service.NSXClient.OrgRootClient.Patch(*orgRoot, &EnforceRevisionCheckParam); err != nil {
+			// Subnets that are not deleted successfully will finally be deleted by GC.
+			log.Error(err, "failed to delete Subnet", "ID", *nsxSubnet.Id)
 		}
-		break
+		if err = service.SubnetStore.Operate(&subnetCopy); err != nil {
+			return err
+		}
+		log.Info("successfully deleted nsxSubnet", "nsxSubnet", nsxSubnet)
 	}
-	nsxSubnet.MarkedForDelete = &MarkedForDelete
-	// WrapHighLevelSubnet will modify the input subnet, make a copy for the following store update.
-	subnetCopy := *nsxSubnet
-	orgRoot, err := service.WrapHierarchySubnet(nsxSubnet, orgID, projectID, vpcID)
-	if err != nil {
-		return err
-	}
-	if err = service.NSXClient.OrgRootClient.Patch(*orgRoot, &EnforceRevisionCheckParam); err != nil {
-		return err
-	}
-	if err = service.SubnetStore.Operate(&subnetCopy); err != nil {
-		return err
-	}
-	log.Info("successfully deleted nsxSubnet", "nsxSubnet", nsxSubnet)
 	return nil
 }
 

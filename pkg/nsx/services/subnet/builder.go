@@ -1,9 +1,9 @@
 package subnet
 
 import (
-	"fmt"
-
+	"github.com/google/uuid"
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/model"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vmware-tanzu/nsx-operator/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/nsx-operator/pkg/nsx/services/common"
@@ -19,17 +19,31 @@ func getCluster(service *SubnetService) string {
 	return service.NSXConfig.Cluster
 }
 
-func (service *SubnetService) buildSubnet(obj *v1alpha1.Subnet) (*model.VpcSubnet, error) {
-	nsxSubnet := &model.VpcSubnet{
-		Id:             String(fmt.Sprintf("subnet_%s", obj.UID)),
-		DisplayName:    String(fmt.Sprintf("%s-%s", obj.ObjectMeta.Namespace, obj.ObjectMeta.Name)),
-		AccessMode:     String(string(obj.Spec.AccessMode)),
-		DhcpConfig:     service.buildDHCPConfig(&obj.Spec.DHCPConfig),
-		Tags:           service.buildBasicTags(obj),
-		AdvancedConfig: service.buildAdvancedConfig(&obj.Spec.AdvancedConfig),
-		Path:           String(obj.Status.NSXResourcePath),
+func (service *SubnetService) buildSubnet(obj client.Object, tags []model.Tag) (*model.VpcSubnet, error) {
+	tags = append(tags, service.buildBasicTags(obj)...)
+	var nsxSubnet *model.VpcSubnet
+	switch o := obj.(type) {
+	case *v1alpha1.Subnet:
+		nsxSubnet = &model.VpcSubnet{
+			//TODO How to compare subnets when using random uuid.
+			Id:             String(uuid.NewString()),
+			AccessMode:     String(string(o.Spec.AccessMode)),
+			DhcpConfig:     service.buildDHCPConfig(&o.Spec.DHCPConfig),
+			Tags:           tags,
+			AdvancedConfig: service.buildAdvancedConfig(&o.Spec.AdvancedConfig),
+		}
+	case *v1alpha1.SubnetSet:
+		nsxSubnet = &model.VpcSubnet{
+			//TODO How to compare subnets when using random uuid.
+			Id:             String(uuid.NewString()),
+			AccessMode:     String(string(o.Spec.AccessMode)),
+			DhcpConfig:     service.buildDHCPConfig(&o.Spec.DHCPConfig),
+			Tags:           tags,
+			AdvancedConfig: service.buildAdvancedConfig(&o.Spec.AdvancedConfig),
+		}
+	default:
+		return nil, SubnetTypeError
 	}
-	nsxSubnet.IpAddresses = append(nsxSubnet.IpAddresses, obj.Spec.IPAddresses...)
 	return nsxSubnet, nil
 }
 
@@ -62,24 +76,35 @@ func (service *SubnetService) buildAdvancedConfig(obj *v1alpha1.AdvancedConfig) 
 	return advancedConfig
 }
 
-func (service *SubnetService) buildBasicTags(obj *v1alpha1.Subnet) []model.Tag {
+func (service *SubnetService) buildBasicTags(obj client.Object) []model.Tag {
 	tags := []model.Tag{
 		{
 			Scope: String(common.TagScopeCluster),
 			Tag:   String(getCluster(service)),
 		},
 		{
-			Scope: String(common.TagScopeNamespace),
-			Tag:   String(obj.ObjectMeta.Namespace),
-		},
-		{
-			Scope: String(common.TagScopeSubnetCRName),
-			Tag:   String(obj.ObjectMeta.Name),
-		},
-		{
 			Scope: String(common.TagScopeSubnetCRUID),
-			Tag:   String(string(obj.UID)),
+			Tag:   String(string(obj.GetUID())),
 		},
+		{
+			Scope: String(common.TagScopeNamespace),
+			Tag:   String(obj.GetNamespace()),
+		},
+	}
+	switch obj.(type) {
+	case *v1alpha1.Subnet:
+		tags = append(tags, model.Tag{
+			Scope: String(common.TagScopeSubnetCRType),
+			Tag:   String("subnet"),
+		})
+	case *v1alpha1.SubnetSet:
+		tags = append(tags, model.Tag{
+			Scope: String(common.TagScopeSubnetCRType),
+			Tag:   String("subnetset"),
+		})
+	default:
+		log.Error(SubnetTypeError, "unsupported type when building NSX Subnet tags")
+		return nil
 	}
 	return tags
 }

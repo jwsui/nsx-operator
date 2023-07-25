@@ -17,24 +17,23 @@ func keyFunc(obj interface{}) (string, error) {
 	}
 }
 
-// indexFunc is used to get index of a resource, usually, which is the UID of the CR controller reconciles,
-// index is used to filter out resources which are related to the CR
-func indexFunc(obj interface{}) ([]string, error) {
-	filterTag := func(v []model.Tag) []string {
-		res := make([]string, 0, 5)
-		for _, tag := range v {
-			if *tag.Scope == common.TagScopeSubnetCRUID {
-				res = append(res, *tag.Tag)
-			}
+func filterTag(tags []model.Tag, tagScope string) []string {
+	var res []string
+	for _, tag := range tags {
+		if *tag.Scope == tagScope {
+			res = append(res, *tag.Tag)
 		}
-		return res
 	}
-	res := make([]string, 0, 5)
+	return res
+}
+
+// subnetIndexFunc is used to filter out NSX Subnets which are tagged with CR UID.
+func subnetIndexFunc(obj interface{}) ([]string, error) {
 	switch o := obj.(type) {
 	case model.VpcSubnet:
-		return filterTag(o.Tags), nil
+		return filterTag(o.Tags, common.TagScopeSubnetCRUID), nil
 	default:
-		return res, errors.New("indexFunc doesn't support unknown type")
+		return nil, errors.New("subnetIndexFunc doesn't support unknown type")
 	}
 }
 
