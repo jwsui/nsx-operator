@@ -1,6 +1,12 @@
 package subnetset
 
 import (
+	"context"
+	"fmt"
+	"github.com/vmware-tanzu/nsx-operator/pkg/apis/v1alpha1"
+	servicecommon "github.com/vmware-tanzu/nsx-operator/pkg/nsx/services/common"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"k8s.io/client-go/util/workqueue"
@@ -24,38 +30,40 @@ type SubnetPortHandler struct {
 // Create allocates Subnet for SubnetPort from SubnetSet.
 func (h *SubnetPortHandler) Create(e event.CreateEvent, _ workqueue.RateLimitingInterface) {
 	log.V(4).Info("SubnetPort generic event, do nothing")
-	//subnetPort := e.Object.(*v1alpha1.SubnetPort)
-	//if subnetPort.Spec.Subnet != "" {
-	//	// Two possible scenarios:
-	//	// - 1. User uses `.Spec.Subnet` directly instead of `.Spec.SubnetSet`.
-	//	// - 2. Subnet has been allocated and `.Spec.Subnet` is rendered by SubnetPortHandler.
-	//	return
-	//}
-	//subnetSet := &v1alpha1.SubnetSet{}
-	//key := types.NamespacedName{
-	//	Namespace: subnetPort.GetNamespace(),
-	//	Name:      subnetPort.Spec.SubnetSet,
-	//}
-	//if err := h.Reconciler.Client.Get(context.Background(), key, subnetSet); err != nil {
-	//	log.Error(err, "failed to get SubnetSet", "ns", key.Namespace, "name", key.Name)
-	//	return
-	//}
-	//log.Info("allocating Subnet for SubnetPort")
-	//vpcList := &v1alpha1.VPCList{}
-	//if err := h.Reconciler.Client.List(context.Background(), vpcList, client.InNamespace(subnetPort.GetNamespace())); err != nil {
-	//	log.Error(err, fmt.Sprintf("failed to get VPC under namespace: %s.\n", subnetPort.GetNamespace()))
-	//	return
-	//}
+	subnetPort := e.Object.(*v1alpha1.SubnetPort)
+	if subnetPort.Spec.Subnet != "" {
+		// Two possible scenarios:
+		// - 1. User uses `.Spec.Subnet` directly instead of `.Spec.SubnetSet`.
+		// - 2. Subnet has been allocated and `.Spec.Subnet` is rendered by SubnetPortHandler.
+		return
+	}
+	subnetSet := &v1alpha1.SubnetSet{}
+	key := types.NamespacedName{
+		Namespace: subnetPort.GetNamespace(),
+		Name:      subnetPort.Spec.SubnetSet,
+	}
+	if err := h.Reconciler.Client.Get(context.Background(), key, subnetSet); err != nil {
+		log.Error(err, "failed to get SubnetSet", "ns", key.Namespace, "name", key.Name)
+		return
+	}
+	log.Info("allocating Subnet for SubnetPort")
+	vpcList := &v1alpha1.VPCList{}
+	if err := h.Reconciler.Client.List(context.Background(), vpcList, client.InNamespace(subnetPort.GetNamespace())); err != nil {
+		log.Error(err, fmt.Sprintf("failed to get VPC under namespace: %s.\n", subnetPort.GetNamespace()))
+		return
+	}
 	//vpcInfo, err := servicecommon.ParseVPCResourcePath(vpcList.Items[0].Status.NSXResourcePath)
-	//if err != nil {
-	//	log.Error(err, "failed to resolve VPC info")
-	//	return
-	//}
-	//_, err = h.Reconciler.getAvailableSubnet(subnetSet, &vpcInfo)
-	//if err != nil {
-	//	log.Error(err, "failed to allocate Subnet")
-	//}
-	// TODO return subnetport id to caller.
+	// This is a hack for demo.
+	vpcInfo, err := servicecommon.ParseVPCResourcePath("/orgs/default/projects/dy_project-1/vpcs/vpc-1")
+	if err != nil {
+		log.Error(err, "failed to resolve VPC info")
+		return
+	}
+	id, err := h.Reconciler.Service.GetAvailableSubnet(subnetSet, &vpcInfo)
+	if err != nil {
+		log.Error(err, "failed to allocate Subnet")
+	}
+	log.Info("subnet allocated", "subnet-id", id)
 }
 
 // Delete TODO Implement this method if required to recycle Subnet without SubnetPort attached.
