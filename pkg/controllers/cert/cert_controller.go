@@ -1,7 +1,4 @@
-/* Copyright © 2024 Broadcom, Inc. All Rights Reserved.
-   SPDX-License-Identifier: Apache-2.0 */
-
-package main
+package cert
 
 import (
 	"bytes"
@@ -11,61 +8,35 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
-	"fmt"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	"github.com/vmware-tanzu/nsx-operator/pkg/config"
+	"github.com/vmware-tanzu/nsx-operator/pkg/controllers/common"
+	"github.com/vmware-tanzu/nsx-operator/pkg/logger"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apimachineryruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes"
 	"math/big"
 	"os"
-	"path"
-	"sync"
-	"time"
-
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
-
-	"github.com/vmware-tanzu/nsx-operator/pkg/config"
-	"github.com/vmware-tanzu/nsx-operator/pkg/logger"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"time"
 )
 
 var (
 	log                            = logger.Log
+	ResultNormal                   = common.ResultNormal
+	ResultRequeue                  = common.ResultRequeue
+	ResultRequeueAfter5mins        = common.ResultRequeueAfter5mins
+	MetricResTypeSubnetSet         = common.MetricResTypeSubnetSet
+	tlsCert                        = "tls.cert"
+	tlsKey                         = "tls.key"
 	validatingWebhookConfiguration = "nsx-operator-validating-webhook-configuration"
-	namespace                      = "vmware-system-nsx"
-	webhookSecret                  = "nsx-operator-webhook-secret"
 )
 
-func main() {
-	fmt.Println("start...")
-	wg := &sync.WaitGroup{}
-	for i := 0; i < 5; i++ {
-		wg.Add(1)
-		go createSecret(wg)
-	}
-	wg.Wait()
-	fmt.Println("end...")
-	//log.Info("Generating webhook certificates...")
-	//if err := generateWebhookCerts(); err != nil {
-	//	panic(err)
-	//}
-}
-
-// WriteFile writes data in the file at the given path
-func writeFile(filepath string, cert *bytes.Buffer) error {
-	f, err := os.Create(filepath)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	_, err = f.Write(cert.Bytes())
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func generateWebhookCerts() error {
+func generateWebhookCerts(client client.Client, secret *v1.Secret) error {
 	var caPEM, serverCertPEM, serverKeyPEM *bytes.Buffer
 	// CA config
 	serialNumber, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
@@ -160,14 +131,10 @@ func generateWebhookCerts() error {
 		log.Error(err, "Failed to create directory", "Dir", config.WebhookCertDir)
 		return err
 	}
-	if err = writeFile(path.Join(config.WebhookCertDir, "tls.crt"), serverCertPEM); err != nil {
-		log.Error(err, "Failed to write tls cert", "Path", path.Join(config.WebhookCertDir, "tls.crt"))
-		return err
-	}
-
-	if err = writeFile(path.Join(config.WebhookCertDir, "tls.key"), serverKeyPEM); err != nil {
-		log.Error(err, "Failed to write tls cert", "Path", path.Join(config.WebhookCertDir, "tls.key"))
-		return err
+	secret.Data[tlsCert] = serverCertPEM.Bytes()
+	secret.Data[tlsKey] = serverKeyPEM.Bytes()
+	if err := client.Update(context.TODO(), secret); err != nil {
+		log.Error(err, "failed to patch secret")
 	}
 	if err = updateWebhookConfig(caPEM); err != nil {
 		return err
@@ -178,7 +145,7 @@ func generateWebhookCerts() error {
 func updateWebhookConfig(caCert *bytes.Buffer) error {
 	config := ctrl.GetConfigOrDie()
 	kubeClient := kubernetes.NewForConfigOrDie(config)
-	webhookCfg, err := kubeClient.AdmissionregistrationV1().ValidatingWebhookConfigurations().Get(context.TODO(), validatingWebhookConfiguration, v1.GetOptions{})
+	webhookCfg, err := kubeClient.AdmissionregistrationV1().ValidatingWebhookConfigurations().Get(context.TODO(), validatingWebhookConfiguration, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -192,37 +159,77 @@ func updateWebhookConfig(caCert *bytes.Buffer) error {
 		webhookCfg.Webhooks[idx] = webhook
 	}
 	if updated {
-		if _, err := kubeClient.AdmissionregistrationV1().ValidatingWebhookConfigurations().Update(context.TODO(), webhookCfg, v1.UpdateOptions{}); err != nil {
+		if _, err := kubeClient.AdmissionregistrationV1().ValidatingWebhookConfigurations().Update(context.TODO(), webhookCfg, metav1.UpdateOptions{}); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func createSecret(wg *sync.WaitGroup) error {
-	defer wg.Done()
-	config := ctrl.GetConfigOrDie()
-	kubeClient := kubernetes.NewForConfigOrDie(config)
-	secret := &corev1.Secret{
-		TypeMeta: v1.TypeMeta{},
-		ObjectMeta: v1.ObjectMeta{
-			Name:      "jsui-secret",
-			Namespace: "default",
-		},
-		Immutable:  nil,
-		Data:       nil,
-		StringData: nil,
-		Type:       "",
+// SubnetSetReconciler reconciles a SubnetSet object
+type CertReconciler struct {
+	Client client.Client
+	Scheme *apimachineryruntime.Scheme
+}
+
+func (r *CertReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	obj := &v1.Secret{}
+	log.Info("reconciling secret", "secret", req.NamespacedName)
+
+	if err := r.Client.Get(ctx, req.NamespacedName, obj); err != nil {
+		log.Error(err, "unable to fetch ", "req", req.NamespacedName)
+		return ResultNormal, client.IgnoreNotFound(err)
 	}
-	_, err := kubeClient.CoreV1().Secrets("default").Create(context.TODO(), secret, v1.CreateOptions{})
-	if err != nil {
-		if errors.IsAlreadyExists(err) {
-			fmt.Println("secret already exists, ignore creating")
-		} else {
-			fmt.Printf("failed to create secret, err: %s\n", err)
+	if _, ok := obj.Data[tlsCert]; ok && len(obj.Data[tlsCert]) > 0 {
+		log.Info("Cert already exists")
+		return ResultNormal, nil
+	}
+	generateWebhookCerts(r.Client, obj)
+	return ctrl.Result{}, nil
+}
+
+var predicateFuncs = predicate.Funcs{
+	CreateFunc: func(e event.CreateEvent) bool {
+		if e.Object.GetNamespace() == "vmware-system-nsx" {
+			return true
 		}
-	} else {
-		fmt.Println("secret created")
+		return false
+	},
+	UpdateFunc: func(e event.UpdateEvent) bool {
+		//oldObj := e.ObjectOld.(*v1.Secret)
+		//newObj := e.ObjectNew.(*v1.Secret)
+		return false
+	},
+	DeleteFunc: func(e event.DeleteEvent) bool {
+		return false
+	},
+}
+
+func (r *CertReconciler) setupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).
+		Watches(
+			&v1.Secret{},
+			&handler.EnqueueRequestForObject{},
+		).Complete(r)
+}
+
+func StartCertController(mgr ctrl.Manager) error {
+	certReconciler := &CertReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}
+	if err := certReconciler.Start(mgr); err != nil {
+		log.Error(err, "failed to create controller", "controller", "Subnet")
+		return err
+	}
+	return nil
+}
+
+// Start setup manager
+func (r *CertReconciler) Start(mgr ctrl.Manager) error {
+	err := r.setupWithManager(mgr)
+	if err != nil {
+		return err
 	}
 	return nil
 }

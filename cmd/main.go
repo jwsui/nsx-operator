@@ -5,6 +5,7 @@ package main
 
 import (
 	"errors"
+	"github.com/vmware-tanzu/nsx-operator/pkg/controllers/cert"
 	"os"
 	"time"
 
@@ -220,6 +221,7 @@ func main() {
 		// Start controllers which only supports VPC
 		StartNetworkInfoController(mgr, vpcService)
 		StartNamespaceController(mgr, cf, vpcService)
+		cert.StartCertController(mgr)
 		// Start subnet/subnetset controller.
 		if err := subnet.StartSubnetController(mgr, subnetService, subnetPortService, vpcService); err != nil {
 			os.Exit(1)
